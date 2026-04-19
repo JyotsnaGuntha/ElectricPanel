@@ -145,6 +145,20 @@ function setLoading(isLoading) {
   document.body.classList.toggle("loading", isLoading);
 }
 
+function openFullscreenFromImage(imageElement) {
+  if (!imageElement?.src) {
+    return;
+  }
+  const overlay = $("fullscreenOverlay");
+  const fullscreenImage = $("fullscreenImage");
+  fullscreenImage.src = imageElement.src;
+  overlay.classList.remove("hidden");
+}
+
+function closeFullscreen() {
+  $("fullscreenOverlay").classList.add("hidden");
+}
+
 function setStatus(message, kind = "ok") {
   const statusCard = $("statusCard");
   const statusText = $("statusText");
@@ -292,6 +306,20 @@ function bindEvents() {
   $("downloadPdfButton").addEventListener("click", () => exportFile("export_pdf", "microgrid_panel_report.pdf"));
   $("downloadGaButton").addEventListener("click", () => exportFile("export_ga_pdf", "microgrid_panel_ga.pdf"));
   $("downloadExcelButton").addEventListener("click", () => exportFile("export_excel", "microgrid_panel_bom.xlsx"));
+  $("fullscreenSldButton").addEventListener("click", () => openFullscreenFromImage($("sldImage")));
+  $("fullscreenGaButton").addEventListener("click", () => openFullscreenFromImage($("gaImage")));
+  $("fullscreenClose").addEventListener("click", closeFullscreen);
+  $("fullscreenOverlay").addEventListener("click", (event) => {
+    if (event.target.id === "fullscreenOverlay") {
+      closeFullscreen();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeFullscreen();
+    }
+  });
 
   ["solarKw", "gridKw", "numDg", "numOutputs", "busbarMaterial", "numPoles"].forEach((id) => {
     $(id).addEventListener("change", () => {

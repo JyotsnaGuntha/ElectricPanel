@@ -124,7 +124,14 @@
             <article class="card diagram-card">
               <div class="card-title-row">
                 <h3>Single Line Diagram</h3>
-                <span class="chip subtle">SVG</span>
+                <button class="diagram-fullscreen-btn" id="fullscreenSldButton" type="button" aria-label="Fullscreen SLD" title="Fullscreen SLD">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <polyline points="9 21 3 21 3 15"></polyline>
+                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                  </svg>
+                </button>
               </div>
               <div class="diagram-frame"><img id="sldImage" alt="SLD preview" /></div>
             </article>
@@ -132,7 +139,14 @@
             <article class="card diagram-card">
               <div class="card-title-row">
                 <h3>General Arrangement</h3>
-                <span class="chip subtle">SVG</span>
+                <button class="diagram-fullscreen-btn" id="fullscreenGaButton" type="button" aria-label="Fullscreen GA" title="Fullscreen GA">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <polyline points="9 21 3 21 3 15"></polyline>
+                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                  </svg>
+                </button>
               </div>
               <div class="diagram-frame"><img id="gaImage" alt="GA preview" /></div>
             </article>
@@ -148,6 +162,11 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div class="fullscreen-overlay hidden" id="fullscreenOverlay" role="dialog" aria-modal="true" aria-label="Diagram fullscreen preview">
+    <button class="fullscreen-close" id="fullscreenClose" type="button" aria-label="Close fullscreen">×</button>
+    <img id="fullscreenImage" alt="Fullscreen diagram preview" />
   </div>
 </body>
 </html>

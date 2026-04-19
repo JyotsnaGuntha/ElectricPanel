@@ -13,6 +13,7 @@ const DEFAULT_STATE = {
 const state = {
   ...DEFAULT_STATE,
   lastDesign: null,
+  hasPendingChanges: false,
 };
 
 const FULLSCREEN_MIN_ZOOM = 1;
@@ -49,6 +50,40 @@ function waitForApi() {
 
 function svgToDataUri(svg) {
   return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+}
+
+function placeholderSvg(title, subtitle, theme = "dark") {
+  const isLight = theme === "light";
+  const bgStart = isLight ? "#f5f9ff" : "#0b1626";
+  const bgEnd = isLight ? "#e7f0fb" : "#15253d";
+  const frame = isLight ? "#94a3b8" : "#334155";
+  const accent = isLight ? "#1ba6a1" : "#56d5d2";
+  const titleColor = isLight ? "#10203a" : "#e7eef9";
+  const subtitleColor = isLight ? "#59708f" : "#9bb0cf";
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${bgStart}"/>
+          <stop offset="100%" stop-color="${bgEnd}"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="1200" height="720" fill="url(#bg)"/>
+      <rect x="70" y="70" width="1060" height="580" rx="20" fill="none" stroke="${frame}" stroke-width="2" stroke-dasharray="10 8"/>
+      <circle cx="600" cy="280" r="50" fill="none" stroke="${accent}" stroke-width="4"/>
+      <line x1="600" y1="230" x2="600" y2="330" stroke="${accent}" stroke-width="4"/>
+      <line x1="550" y1="280" x2="650" y2="280" stroke="${accent}" stroke-width="4"/>
+      <text x="600" y="390" text-anchor="middle" fill="${titleColor}" font-size="38" font-family="Segoe UI, Arial, sans-serif" font-weight="700">${title}</text>
+      <text x="600" y="435" text-anchor="middle" fill="${subtitleColor}" font-size="24" font-family="Segoe UI, Arial, sans-serif">${subtitle}</text>
+      <text x="600" y="515" text-anchor="middle" fill="${accent}" font-size="22" font-family="Segoe UI, Arial, sans-serif">Click Generate to build live preview</text>
+    </svg>
+  `;
+}
+
+function setPreviewPlaceholders() {
+  $("sldImage").src = svgToDataUri(placeholderSvg("SLD Preview", "Diagram will appear after generation", state.theme));
+  $("gaImage").src = svgToDataUri(placeholderSvg("GA Preview", "Layout will appear after generation", state.theme));
 }
 
 function numberValue(id, fallback = 0) {
@@ -281,6 +316,32 @@ async function generateDesign() {
     state.busbar_material = payload.busbar_material;
     state.num_poles = payload.num_poles;
     renderFromDesign(design);
+    state.hasPendingChanges = false;
+  } catch (error) {
+    setStatus(error.message, "warn");
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function refreshThemeForLastDesign() {
+  if (!state.lastDesign?.inputs) {
+    return;
+  }
+
+  const api = await waitForApi();
+  const payload = {
+    ...state.lastDesign.inputs,
+    theme: state.theme,
+  };
+
+  setLoading(true);
+  try {
+    const design = await api.generate(payload);
+    if (!design.ok) {
+      throw new Error(design.error || "Design generation failed");
+    }
+    renderFromDesign(design);
   } catch (error) {
     setStatus(error.message, "warn");
   } finally {
@@ -331,8 +392,8 @@ async function loadInitialState() {
   $("themeToggle").setAttribute("aria-label", state.theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
   $("themeToggle").setAttribute("title", state.theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
 
+  setPreviewPlaceholders();
   renderDynamicFields();
-  await generateDesign();
 }
 
 function bindEvents() {
@@ -344,6 +405,16 @@ function bindEvents() {
     $("themeToggle").setAttribute("title", state.theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
     const api = await waitForApi();
     await api.set_theme(state.theme);
+    if (!state.lastDesign) {
+      setPreviewPlaceholders();
+      return;
+    }
+
+    if (state.hasPendingChanges) {
+      await refreshThemeForLastDesign();
+      return;
+    }
+
     await generateDesign();
   });
 
@@ -430,18 +501,21 @@ function bindEvents() {
 
   ["solarKw", "gridKw", "numDg", "numOutputs", "busbarMaterial", "numPoles"].forEach((id) => {
     $(id).addEventListener("change", () => {
+      state.hasPendingChanges = true;
       renderDynamicFields();
     });
   });
 
   ["solarKw", "gridKw", "numDg", "numOutputs"].forEach((id) => {
     $(id).addEventListener("input", () => {
+      state.hasPendingChanges = true;
       renderDynamicFields();
     });
   });
 
   document.addEventListener("input", (event) => {
     if (event.target.matches("#dgInputs input, #outgoingInputs input")) {
+      state.hasPendingChanges = true;
       state.dg_ratings = Array.from($("dgInputs").querySelectorAll("input")).map((input) => Number(input.value) || 0);
       state.outgoing_ratings = Array.from($("outgoingInputs").querySelectorAll("input")).map((input) => Number(input.value) || 0);
     }

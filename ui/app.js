@@ -124,18 +124,6 @@ function renderMetrics(design) {
     .join("");
 }
 
-function renderTable(containerId, rows, headers) {
-  if (!rows?.length) {
-    $(containerId).innerHTML = `<li class="list-empty">No data available.</li>`;
-    return;
-  }
-  const listItems = rows.map((row) => {
-    const primary = headers.map((header) => row[header]).filter(Boolean).join(" | ");
-    return `<li>${primary}</li>`;
-  });
-  $(containerId).innerHTML = listItems.join("");
-}
-
 function renderFromDesign(design) {
   state.lastDesign = design;
   renderMetrics(design);
@@ -150,10 +138,6 @@ function renderFromDesign(design) {
       : `System is properly sized. Total busbar current ${design.summary.total_busbar_current.toFixed(2)} A.`,
     warning ? "warn" : "ok",
   );
-
-  $("bomCount").textContent = `${design.bom_rows.length} items`;
-
-  renderTable("bomTable", design.bom_rows, ["Sr No", "Description", "Rating", "Qty", "UOM"]);
 }
 
 async function generateDesign() {

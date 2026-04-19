@@ -137,8 +137,7 @@ h1 {
 
 .control-stack,
 .summary-grid,
-.diagrams-grid,
-.lists-grid {
+.diagrams-grid {
   padding: 10px;
 }
 
@@ -309,8 +308,7 @@ select:focus {
   padding: 0;
 }
 
-.diagram-card,
-.list-card {
+.diagram-card {
   padding: 8px;
 }
 
@@ -331,36 +329,6 @@ select:focus {
   max-height: 100%;
   object-fit: contain;
   display: block;
-}
-
-.lists-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  padding: 0;
-}
-
-.compact-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-  max-height: 150px;
-  overflow: auto;
-}
-
-.compact-list li {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: rgba(9, 16, 27, 0.2);
-  padding: 6px 8px;
-  font-size: 0.75rem;
-  color: var(--text);
-}
-
-.list-empty {
-  color: var(--muted);
 }
 
 button {
@@ -400,22 +368,19 @@ button:active {
 }
 
 .control-stack::-webkit-scrollbar,
-.output-stack::-webkit-scrollbar,
-.compact-list::-webkit-scrollbar {
+.output-stack::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 .control-stack::-webkit-scrollbar-thumb,
-.output-stack::-webkit-scrollbar-thumb,
-.compact-list::-webkit-scrollbar-thumb {
+.output-stack::-webkit-scrollbar-thumb {
   background: rgba(86, 213, 210, 0.35);
   border-radius: 999px;
 }
 
 .control-stack::-webkit-scrollbar-track,
-.output-stack::-webkit-scrollbar-track,
-.compact-list::-webkit-scrollbar-track {
+.output-stack::-webkit-scrollbar-track {
   background: rgba(13, 24, 40, 0.2);
 }
 
@@ -447,10 +412,6 @@ button:active {
 
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lists-grid {
-    grid-template-columns: 1fr;
   }
 }
 

@@ -151,10 +151,8 @@ function renderFromDesign(design) {
     warning ? "warn" : "ok",
   );
 
-  $("scheduleCount").textContent = `${design.schedule_rows.length} items`;
   $("bomCount").textContent = `${design.bom_rows.length} items`;
 
-  renderTable("scheduleTable", design.schedule_rows, ["tag", "description", "rating", "poles", "dimensions", "frame"]);
   renderTable("bomTable", design.bom_rows, ["Sr No", "Description", "Rating", "Qty", "UOM"]);
 }
 

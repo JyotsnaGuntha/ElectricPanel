@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Microgrid Panel Designer Logo</title>
+  <desc id="desc">A circular electrical panel emblem with a lightning bolt and circuit nodes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="120" y1="120" x2="904" y2="904" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#14253f"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="176" y1="176" x2="848" y2="848" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1ba6a1"/>
+      <stop offset="1" stop-color="#f7b84b"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="296" y1="248" x2="728" y2="776" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e8f1fb"/>
+      <stop offset="1" stop-color="#b8c7db"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="404" y1="296" x2="620" y2="736" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f9c84a"/>
+      <stop offset="1" stop-color="#ff8f2b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000000" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="192" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <circle cx="512" cy="512" r="360" fill="none" stroke="url(#ring)" stroke-width="26"/>
+    <circle cx="512" cy="512" r="318" fill="#0e1a2d" opacity="0.92"/>
+
+    <g transform="translate(0 8)">
+      <rect x="330" y="240" width="364" height="544" rx="42" fill="url(#panel)" stroke="#7f92aa" stroke-width="12"/>
+      <rect x="370" y="284" width="284" height="104" rx="18" fill="#0f1f35" opacity="0.95"/>
+      <rect x="370" y="416" width="284" height="48" rx="14" fill="#93a8bf" opacity="0.36"/>
+      <rect x="370" y="488" width="284" height="48" rx="14" fill="#93a8bf" opacity="0.36"/>
+      <rect x="370" y="560" width="284" height="48" rx="14" fill="#93a8bf" opacity="0.36"/>
+      <rect x="370" y="632" width="284" height="48" rx="14" fill="#93a8bf" opacity="0.36"/>
+      <circle cx="512" cy="704" r="22" fill="#0f1f35"/>
+      <circle cx="512" cy="704" r="10" fill="#f7b84b"/>
+
+      <path d="M512 322 L430 488 H492 L468 612 L594 450 H532 L560 322 Z" fill="url(#bolt)" stroke="#fff2cc" stroke-width="8" stroke-linejoin="round"/>
+    </g>
+
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M308 364 H248" stroke="#1ba6a1" stroke-width="16"/>
+      <path d="M716 364 H776" stroke="#f7b84b" stroke-width="16"/>
+      <path d="M308 660 H244" stroke="#1ba6a1" stroke-width="16"/>
+      <path d="M716 660 H780" stroke="#f7b84b" stroke-width="16"/>
+      <circle cx="224" cy="364" r="18" fill="#1ba6a1"/>
+      <circle cx="800" cy="364" r="18" fill="#f7b84b"/>
+      <circle cx="224" cy="660" r="18" fill="#1ba6a1"/>
+      <circle cx="800" cy="660" r="18" fill="#f7b84b"/>
+    </g>
+
+    <g fill="#9db5cc" opacity="0.42">
+      <circle cx="512" cy="208" r="10"/>
+      <circle cx="512" cy="816" r="10"/>
+      <circle cx="208" cy="512" r="10"/>
+      <circle cx="816" cy="512" r="10"/>
+    </g>
+  </g>
+</svg>

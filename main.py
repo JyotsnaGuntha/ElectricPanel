@@ -36,6 +36,7 @@ def main():
 
     bridge = MicrogridBridge()
     ui_path = resource_path("ui", "index.html")
+    icon_path = resource_path("assets", "microgrid-panel-icon.ico")
     width, height, x, y = _get_window_bounds()
     webview.create_window(
         "Microgrid Panel Designer",
@@ -46,6 +47,7 @@ def main():
         x=x,
         y=y,
         min_size=(1024, 720),
+        icon=str(icon_path),
         background_color="#0f172a",
     )
     webview.start(gui="qt", debug=False)

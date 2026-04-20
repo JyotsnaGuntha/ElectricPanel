@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('ui', 'ui'), ('Kirloskar Oil Engine Logo.png', '.')],
+    datas=[('ui', 'ui'), ('assets', 'assets'), ('Kirloskar Oil Engine Logo.png', '.')],
     hiddenimports=['webview.platforms.winforms', 'webview.platforms.edgechromium'],
     hookspath=[],
     hooksconfig={},

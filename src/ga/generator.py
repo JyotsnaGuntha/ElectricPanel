@@ -276,20 +276,8 @@ def generate_ga_svg(
 
     cur_y += z_gap1
     # Zone 3: busbar chamber
-    bb_top = cur_y
     bb_bot = cur_y + z_bb
-    dwg.add(dwg.rect(insert=(mp_x + 5, bb_top), size=(mF_W - 10, z_bb),
-                     fill=BB_C, stroke=BB_ST, stroke_width=1.2, rx=2))
-    bb_label = f"Busbar Chamber — {BUSBAR_CH} mm"
-    dwg.add(dwg.text(bb_label,
-                     insert=(mp_x + mF_W / 2, bb_top + z_bb / 2 + 4),
-                     font_size=min(10, max(8, z_bb * 0.35)),
-                     fill="#fca5a5", text_anchor="middle",
-                     font_family="Arial", font_weight="bold"))
     cur_y = bb_bot
-
-    dwg.add(dwg.line((mp_x + 5, bb_bot), (mp_x + mF_W - 5, bb_bot),
-                     stroke=ZONE_ST, stroke_width=0.7, stroke_dasharray="5,3"))
     cur_y += z_gap2
 
     # Zone 4: outgoing row(s)
@@ -374,11 +362,6 @@ def generate_ga_svg(
         ext_v(mp_y, mp_x + mF_W + 3, mp_dim_x - 2)
         ext_v(mp_y + mF_H, mp_x + mF_W + 3, mp_dim_x - 2)
         arr_v(mp_dim_x, mp_y, mp_y + mF_H, f"MP: {MOUNT_H} mm", right=True)
-
-    bb_dim_x = FRONT_X + pF_W + 12
-    ext_v(bb_top, FRONT_X + pF_W, bb_dim_x - 2)
-    ext_v(bb_bot, FRONT_X + pF_W, bb_dim_x - 2)
-    arr_v(bb_dim_x, bb_top, bb_bot, f"BB: {BUSBAR_CH} mm", right=True)
 
     inc_dim_x = FRONT_X + pF_W + 32
     ext_v(inc_top, FRONT_X + pF_W, inc_dim_x - 2)

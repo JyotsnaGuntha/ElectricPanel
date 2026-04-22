@@ -77,7 +77,7 @@ def generate_bom_items(
     # Solar incomer
     if solar_kw > 0:
         items.append(BOMItem(
-            f"Solar Incomer MCCB {mccb_solar}A, {num_poles}P, 36kA BREAKING CAPACITY",
+            f"Solar Incomer MCCB {mccb_solar}A, {num_poles}P, 36kA",
             "36kA",
             1,
             "Nos"
@@ -86,7 +86,7 @@ def generate_bom_items(
     # Grid incomer
     if grid_kw > 0:
         items.append(BOMItem(
-            f"Grid Incomer MCCB {mccb_grid}A, {num_poles}P, 36kA BREAKING CAPACITY",
+            f"Grid Incomer MCCB {mccb_grid}A, {num_poles}P, 36kA",
             "36kA",
             1,
             "Nos"
@@ -96,7 +96,7 @@ def generate_bom_items(
     if num_dg > 0:
         for r, count in Counter(dg_mccbs).items():
             items.append(BOMItem(
-                f"DG Incomer MCCB {r}A, {num_poles}P, 36kA BREAKING CAPACITY",
+                f"DG Incomer MCCB {r}A, {num_poles}P, 36kA",
                 "36kA",
                 count,
                 "Nos"
@@ -106,7 +106,7 @@ def generate_bom_items(
     if mccb_outputs:
         for r, count in Counter(mccb_outputs).items():
             items.append(BOMItem(
-                f"Outgoing Feeder MCCB {int(r)}A, {num_poles}P, 36kA BREAKING CAPACITY",
+                f"Outgoing Feeder MCCB {int(r)}A, {num_poles}P, 36kA",
                 "36kA",
                 count,
                 "Nos"

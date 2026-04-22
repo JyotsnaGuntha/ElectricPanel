@@ -47,10 +47,9 @@ def main():
         x=x,
         y=y,
         min_size=(1024, 720),
-        icon=str(icon_path),
         background_color="#0f172a",
     )
-    webview.start(gui="qt", debug=False)
+    webview.start(gui="qt", debug=False, icon=str(icon_path))
 
 if __name__ == "__main__":
     main()

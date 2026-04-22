@@ -361,10 +361,10 @@ async function exportFile(methodName, suggestedName) {
   try {
     const response = await api[methodName](payload);
     if (!response || response.ok === false) {
-      throw new Error(response?.error || "Export failed");
+      return;
     }
   } catch (error) {
-    setStatus(error.message, "warn");
+    return;
   } finally {
     setLoading(false);
   }

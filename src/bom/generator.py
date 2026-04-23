@@ -5,6 +5,8 @@ Core BOM data generation and item management.
 
 from collections import Counter
 
+from ..utils import get_mccb_breaking_capacity
+
 
 class BOMItem:
     """Represents a single BOM line item."""
@@ -76,18 +78,20 @@ def generate_bom_items(
     
     # Solar incomer
     if solar_kw > 0:
+        mccb_solar_kA = get_mccb_breaking_capacity(mccb_solar)
         items.append(BOMItem(
-            f"MCCB {mccb_solar}A, {num_poles}P, 36kA",
-            "36kA",
+            f"MCCB {mccb_solar}A, {num_poles}P, {mccb_solar_kA}",
+            mccb_solar_kA,
             1,
             "Nos"
         ))
     
     # Grid incomer
     if grid_kw > 0:
+        mccb_grid_kA = get_mccb_breaking_capacity(mccb_grid)
         items.append(BOMItem(
-            f"MCCB {mccb_grid}A, {num_poles}P, 36kA",
-            "36kA",
+            f"MCCB {mccb_grid}A, {num_poles}P, {mccb_grid_kA}",
+            mccb_grid_kA,
             1,
             "Nos"
         ))
@@ -95,9 +99,10 @@ def generate_bom_items(
     # DG incomers (grouped by rating)
     if num_dg > 0:
         for r, count in Counter(dg_mccbs).items():
+            mccb_ka = get_mccb_breaking_capacity(r)
             items.append(BOMItem(
-                f"MCCB {r}A, {num_poles}P, 36kA",
-                "36kA",
+                f"MCCB {r}A, {num_poles}P, {mccb_ka}",
+                mccb_ka,
                 count,
                 "Nos"
             ))
@@ -105,9 +110,10 @@ def generate_bom_items(
     # Outgoing feeders (grouped by rating)
     if mccb_outputs:
         for r, count in Counter(mccb_outputs).items():
+            mccb_ka = get_mccb_breaking_capacity(r)
             items.append(BOMItem(
-                f"MCCB {int(r)}A, {num_poles}P, 36kA",
-                "36kA",
+                f"MCCB {int(r)}A, {num_poles}P, {mccb_ka}",
+                mccb_ka,
                 count,
                 "Nos"
             ))

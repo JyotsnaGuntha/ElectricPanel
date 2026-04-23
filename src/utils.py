@@ -193,6 +193,45 @@ def get_mccb_rating(current):
     return STANDARD_MCCBS[-1]
 
 
+def get_mccb_breaking_capacity(mccb_rating):
+    """
+    Return recommended MCCB breaking capacity (kA) from a full rating-wise table.
+
+    Any input is first normalized to the nearest standard MCCB rating so
+    non-standard user-entered values are handled consistently.
+    """
+    rating = int(mccb_rating or 0)
+    standard_rating = get_standard_rating(rating)
+
+    breaking_capacity_by_rating = {
+        16: "16kA",
+        20: "16kA",
+        25: "16kA",
+        32: "16kA",
+        40: "18kA",
+        50: "18kA",
+        63: "25kA",
+        80: "25kA",
+        100: "25kA",
+        125: "25kA",
+        160: "25kA",
+        200: "36kA",
+        250: "36kA",
+        315: "36kA",
+        400: "50kA",
+        500: "50kA",
+        630: "50kA",
+        800: "65kA",
+        1000: "65kA",
+        1250: "85kA",
+        1600: "100kA",
+        2000: "100kA",
+        2500: "100kA",
+    }
+
+    return breaking_capacity_by_rating.get(standard_rating, "36kA")
+
+
 # ============================================================================
 # Panel Sizing Helper
 # ============================================================================

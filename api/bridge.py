@@ -4,8 +4,6 @@ Bridge between the JavaScript frontend and the Python design engine.
 
 from __future__ import annotations
 
-import base64
-import io
 import re
 from datetime import datetime
 from pathlib import Path
@@ -26,7 +24,6 @@ from core.utils import (
     get_standard_rating,
     get_theme_colors,
     generate_busbar_spec,
-    load_mccb_dimensions_from_file,
 )
 
 
@@ -77,32 +74,12 @@ class MicrogridBridge:
     def get_state(self):
         payload = dict(self.last_payload)
         payload["theme"] = self.theme
-        payload["mccb_loaded"] = bool(self.mccb_db)
-        payload["mccb_count"] = len(self.mccb_db)
-        payload["mccb_preview"] = self._mccb_preview()
         return payload
 
     def set_theme(self, theme):
         if theme in ("dark", "light"):
             self.theme = theme
         return {"ok": True, "theme": self.theme}
-
-    def load_mccb_database(self, file_name, data_base64):
-        try:
-            raw_bytes = base64.b64decode(data_base64)
-            buffer = io.BytesIO(raw_bytes)
-            db_loaded = load_mccb_dimensions_from_file(uploaded_file=buffer)
-            if db_loaded:
-                self.mccb_db = db_loaded
-                return {
-                    "ok": True,
-                    "file_name": file_name,
-                    "count": len(db_loaded),
-                    "preview": self._mccb_preview(),
-                }
-            return {"ok": False, "error": "Could not parse MCCB workbook. Check the format."}
-        except Exception as error:
-            return {"ok": False, "error": str(error)}
 
     def generate(self, payload=None):
         try:
@@ -212,21 +189,6 @@ class MicrogridBridge:
             return {"ok": True, "filename": target_path.name, "path": str(target_path)}
         except Exception as error:
             return {"ok": False, "error": str(error)}
-
-    def _mccb_preview(self, limit=20):
-        preview = []
-        for rating in sorted(self._active_db().keys())[:limit]:
-            dims = self._active_db()[rating]
-            preview.append(
-                {
-                    "rating": rating,
-                    "height": dims["h"],
-                    "width": dims["w"],
-                    "depth": dims["d"],
-                    "frame": dims["frame"],
-                }
-            )
-        return preview
 
     def _generate_sld_light(self, design):
         """Generate SLD SVG with light theme colors for export."""
@@ -455,5 +417,4 @@ class MicrogridBridge:
             "bom_rows": bom_rows,
             "bom_objects": bom_objects,
             "schedule_rows": schedule_rows,
-            "mccb_preview": self._mccb_preview(),
         }

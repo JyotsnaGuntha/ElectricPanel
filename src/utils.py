@@ -228,7 +228,7 @@ def get_mccb_breaking_capacity(mccb_rating):
         2000: "100kA",
         2500: "100kA",
     }
-
+    #dict.get(key, default)
     return breaking_capacity_by_rating.get(standard_rating, "36kA")
 
 

@@ -353,7 +353,7 @@ select:focus {
 
 .number-stepper input[type="number"] {
   min-width: 0;
-  padding-right: 56px;
+  padding-right: 48px;
 }
 
 input[type="number"]::-webkit-outer-spin-button,
@@ -374,7 +374,7 @@ input[type="number"] {
 
 .stacked-inputs .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
+  grid-template-columns: minmax(0, 1fr) 148px;
   gap: 8px;
   align-items: center;
 }

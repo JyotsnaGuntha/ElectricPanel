@@ -169,7 +169,7 @@ function renderDynamicFields() {
     wrapper.className = "row";
     wrapper.innerHTML = `
       <span>DG ${index + 1}</span>
-      <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter DG ${index + 1} rating" data-dg-index="${index}" />
+      <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter" data-dg-index="${index}" />
     `;
     dgContainer.appendChild(wrapper);
   }
@@ -180,7 +180,7 @@ function renderDynamicFields() {
     wrapper.className = "row";
     wrapper.innerHTML = `
       <span>O/G ${index + 1}</span>
-      <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter O/G ${index + 1} rating" data-output-index="${index}" />
+      <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter" data-output-index="${index}" />
     `;
     outputContainer.appendChild(wrapper);
   }

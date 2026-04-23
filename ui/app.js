@@ -1,13 +1,13 @@
 const DEFAULT_STATE = {
   theme: "dark",
-  solar_kw: 100,
-  grid_kw: 120,
-  num_dg: 2,
-  dg_ratings: [250, 250],
-  num_outputs: 3,
-  outgoing_ratings: [400, 400, 250],
-  busbar_material: "Aluminium",
-  num_poles: 4,
+  solar_kw: null,
+  grid_kw: null,
+  num_dg: null,
+  dg_ratings: [],
+  num_outputs: null,
+  outgoing_ratings: [],
+  busbar_material: "",
+  num_poles: null,
 };
 
 const state = {
@@ -91,6 +91,22 @@ function numberValue(id, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function parseOptionalNumber(rawValue) {
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return null;
+  }
+  const value = Number(rawValue);
+  return Number.isFinite(value) ? value : null;
+}
+
+function formatInputValue(value) {
+  return Number.isFinite(value) ? String(value) : "";
+}
+
+function collectDynamicInputValues(containerId) {
+  return Array.from($(containerId).querySelectorAll("input")).map((input) => parseOptionalNumber(input.value));
+}
+
 function enhanceNumberSteppers(scope = document) {
   const numericInputs = scope.querySelectorAll('input[type="number"]:not([data-stepperized="true"])');
 
@@ -137,32 +153,34 @@ function enhanceNumberSteppers(scope = document) {
 
 function renderDynamicFields() {
   const dgCount = Math.max(0, Math.floor(numberValue("numDg", 0)));
-  const outputCount = Math.max(1, Math.floor(numberValue("numOutputs", 1)));
+  const outputCount = Math.max(0, Math.floor(numberValue("numOutputs", 0)));
   const dgContainer = $("dgInputs");
   const outputContainer = $("outgoingInputs");
 
-  const dgValues = Array.from(dgContainer.querySelectorAll("input")).map((input) => Number(input.value) || 0);
-  const outgoingValues = Array.from(outputContainer.querySelectorAll("input")).map((input) => Number(input.value) || 0);
+  const dgValues = collectDynamicInputValues("dgInputs");
+  const outgoingValues = collectDynamicInputValues("outgoingInputs");
 
   dgContainer.innerHTML = "";
   outputContainer.innerHTML = "";
 
   for (let index = 0; index < dgCount; index += 1) {
+    const value = dgValues[index] ?? parseOptionalNumber(state.dg_ratings[index]);
     const wrapper = document.createElement("label");
     wrapper.className = "row";
     wrapper.innerHTML = `
       <span>DG ${index + 1}</span>
-      <input type="number" min="0" step="1" value="${dgValues[index] ?? state.dg_ratings[index] ?? 250}" data-dg-index="${index}" />
+      <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter DG ${index + 1} rating" data-dg-index="${index}" />
     `;
     dgContainer.appendChild(wrapper);
   }
 
   for (let index = 0; index < outputCount; index += 1) {
+    const value = outgoingValues[index] ?? parseOptionalNumber(state.outgoing_ratings[index]);
     const wrapper = document.createElement("label");
     wrapper.className = "row";
     wrapper.innerHTML = `
       <span>O/G ${index + 1}</span>
-      <input type="number" min="0" step="1" value="${outgoingValues[index] ?? state.outgoing_ratings[index] ?? (index < 2 ? 400 : 250)}" data-output-index="${index}" />
+      <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter O/G ${index + 1} rating" data-output-index="${index}" />
     `;
     outputContainer.appendChild(wrapper);
   }
@@ -172,19 +190,58 @@ function renderDynamicFields() {
 }
 
 function collectInputs() {
-  const dgInputs = Array.from($("dgInputs").querySelectorAll("input")).map((input) => Number(input.value) || 0);
-  const outputInputs = Array.from($("outgoingInputs").querySelectorAll("input")).map((input) => Number(input.value) || 0);
+  const dgInputs = collectDynamicInputValues("dgInputs");
+  const outputInputs = collectDynamicInputValues("outgoingInputs");
+
+  const solarKwRaw = $("solarKw").value;
+  const gridKwRaw = $("gridKw").value;
+  const numDgRaw = $("numDg").value;
+  const numOutputsRaw = $("numOutputs").value;
+  const busbarMaterial = $("busbarMaterial").value;
+  const numPolesRaw = $("numPoles").value;
+
+  if (solarKwRaw === "") {
+    throw new Error("Please enter solar capacity.");
+  }
+  if (gridKwRaw === "") {
+    throw new Error("Please enter grid capacity.");
+  }
+  if (numDgRaw === "") {
+    throw new Error("Please enter number of DGs.");
+  }
+  if (numOutputsRaw === "") {
+    throw new Error("Please enter outgoing feeders.");
+  }
+  if (!busbarMaterial) {
+    throw new Error("Please select busbar material.");
+  }
+  if (!numPolesRaw) {
+    throw new Error("Please select system phases / poles.");
+  }
+
+  const numDg = Math.max(0, Math.floor(Number(numDgRaw)));
+  const numOutputs = Math.max(0, Math.floor(Number(numOutputsRaw)));
+  if (numOutputs < 1) {
+    throw new Error("Outgoing feeders must be at least 1.");
+  }
+
+  if (numDg > dgInputs.length || dgInputs.some((value) => value === null)) {
+    throw new Error("Please enter all DG ratings.");
+  }
+  if (numOutputs > outputInputs.length || outputInputs.some((value) => value === null)) {
+    throw new Error("Please enter all outgoing feeder ratings.");
+  }
 
   return {
     theme: state.theme,
-    solar_kw: numberValue("solarKw", 0),
-    grid_kw: numberValue("gridKw", 0),
-    num_dg: Math.max(0, Math.floor(numberValue("numDg", 0))),
+    solar_kw: Number(solarKwRaw),
+    grid_kw: Number(gridKwRaw),
+    num_dg: numDg,
     dg_ratings: dgInputs,
-    num_outputs: Math.max(1, Math.floor(numberValue("numOutputs", 1))),
+    num_outputs: numOutputs,
     outgoing_ratings: outputInputs,
-    busbar_material: $("busbarMaterial").value,
-    num_poles: Number($("numPoles").value) || 4,
+    busbar_material: busbarMaterial,
+    num_poles: Number(numPolesRaw),
   };
 }
 
@@ -297,7 +354,13 @@ function renderFromDesign(design) {
 
 async function generateDesign() {
   const api = await waitForApi();
-  const payload = collectInputs();
+  let payload;
+  try {
+    payload = collectInputs();
+  } catch (error) {
+    window.alert(error.message);
+    return;
+  }
   state.theme = payload.theme;
   document.body.dataset.theme = state.theme;
   setLoading(true);
@@ -355,7 +418,13 @@ async function refreshThemeForLastDesign() {
 
 async function exportFile(methodName, suggestedName) {
   const api = await waitForApi();
-  const payload = collectInputs();
+  let payload;
+  try {
+    payload = collectInputs();
+  } catch (error) {
+    window.alert(error.message);
+    return;
+  }
   setLoading(true);
 
   try {
@@ -384,12 +453,12 @@ async function loadInitialState() {
   state.busbar_material = initial.busbar_material ?? DEFAULT_STATE.busbar_material;
   state.num_poles = initial.num_poles ?? DEFAULT_STATE.num_poles;
 
-  $("solarKw").value = state.solar_kw;
-  $("gridKw").value = state.grid_kw;
-  $("numDg").value = state.num_dg;
-  $("numOutputs").value = state.num_outputs;
-  $("busbarMaterial").value = state.busbar_material;
-  $("numPoles").value = state.num_poles;
+  $("solarKw").value = formatInputValue(parseOptionalNumber(state.solar_kw));
+  $("gridKw").value = formatInputValue(parseOptionalNumber(state.grid_kw));
+  $("numDg").value = formatInputValue(parseOptionalNumber(state.num_dg));
+  $("numOutputs").value = formatInputValue(parseOptionalNumber(state.num_outputs));
+  $("busbarMaterial").value = state.busbar_material || "";
+  $("numPoles").value = state.num_poles ? String(state.num_poles) : "";
 
   document.body.dataset.theme = state.theme;
   $("themeToggle").textContent = state.theme === "dark" ? "☀️" : "🌙";
@@ -520,8 +589,8 @@ function bindEvents() {
   document.addEventListener("input", (event) => {
     if (event.target.matches("#dgInputs input, #outgoingInputs input")) {
       state.hasPendingChanges = true;
-      state.dg_ratings = Array.from($("dgInputs").querySelectorAll("input")).map((input) => Number(input.value) || 0);
-      state.outgoing_ratings = Array.from($("outgoingInputs").querySelectorAll("input")).map((input) => Number(input.value) || 0);
+      state.dg_ratings = collectDynamicInputValues("dgInputs");
+      state.outgoing_ratings = collectDynamicInputValues("outgoingInputs");
     }
   });
 }

@@ -58,14 +58,14 @@ class MicrogridBridge:
 
     def _default_payload(self):
         return {
-            "solar_kw": 100,
-            "grid_kw": 120,
-            "num_dg": 2,
-            "dg_ratings": [250, 250],
-            "num_outputs": 3,
-            "outgoing_ratings": [400, 400, 250],
-            "busbar_material": "Aluminium",
-            "num_poles": 4,
+            "solar_kw": None,
+            "grid_kw": None,
+            "num_dg": None,
+            "dg_ratings": [],
+            "num_outputs": None,
+            "outgoing_ratings": [],
+            "busbar_material": "",
+            "num_poles": None,
         }
 
     def _active_db(self):
@@ -263,12 +263,19 @@ class MicrogridBridge:
         solar_kw = _as_float(payload.get("solar_kw", 0))
         grid_kw = _as_float(payload.get("grid_kw", 0))
         num_dg = max(0, _as_int(payload.get("num_dg", 0)))
-        num_outputs = max(1, _as_int(payload.get("num_outputs", 1)))
-        num_poles = _as_int(payload.get("num_poles", 4), 4)
-        busbar_material = payload.get("busbar_material", "Copper")
+        num_outputs = max(0, _as_int(payload.get("num_outputs", 0)))
+        num_poles = _as_int(payload.get("num_poles", 0), 0)
+        busbar_material = str(payload.get("busbar_material") or "").strip()
+
+        if busbar_material not in ("Copper", "Aluminium"):
+            raise ValueError("Please select busbar material.")
+        if num_poles not in (3, 4):
+            raise ValueError("Please select system phases / poles.")
+        if num_outputs < 1:
+            raise ValueError("Outgoing feeders must be at least 1.")
 
         dg_ratings = _normalize_list(payload.get("dg_ratings", []), num_dg, 0)
-        outgoing_ratings = _normalize_list(payload.get("outgoing_ratings", []), num_outputs, 250)
+        outgoing_ratings = _normalize_list(payload.get("outgoing_ratings", []), num_outputs, 0)
 
         dg_ratings = [_as_float(value, 0) for value in dg_ratings]
         outgoing_ratings = [_as_float(value, 0) for value in outgoing_ratings]

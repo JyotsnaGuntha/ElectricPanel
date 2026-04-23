@@ -35,32 +35,34 @@
               <div class="grid one-col">
                 <label>
                   <span>Solar (kWp)</span>
-                  <input id="solarKw" type="number" min="0" step="1" value="100" />
+                  <input id="solarKw" type="number" min="0" step="1" placeholder="Enter solar capacity" />
                 </label>
                 <label>
                   <span>Grid (kW)</span>
-                  <input id="gridKw" type="number" min="0" step="1" value="120" />
+                  <input id="gridKw" type="number" min="0" step="1" placeholder="Enter grid capacity" />
                 </label>
                 <label>
                   <span>Number of DGs</span>
-                  <input id="numDg" type="number" min="0" max="4" step="1" value="2" />
+                  <input id="numDg" type="number" min="0" max="4" step="1" placeholder="Enter number of DGs" />
                 </label>
                 <label>
                   <span>Outgoing Feeders</span>
-                  <input id="numOutputs" type="number" min="1" max="10" step="1" value="3" />
+                  <input id="numOutputs" type="number" min="1" max="10" step="1" placeholder="Enter outgoing feeders" />
                 </label>
                 <label>
                   <span>Busbar Material</span>
                   <select id="busbarMaterial">
+                    <option value="" selected>Select</option>
                     <option value="Copper">Copper</option>
-                    <option value="Aluminium" selected>Aluminium</option>
+                    <option value="Aluminium">Aluminium</option>
                   </select>
                 </label>
                 <label>
                   <span>System Phases / Poles</span>
                   <select id="numPoles">
+                    <option value="" selected>Select</option>
                     <option value="3">3</option>
-                    <option value="4" selected>4</option>
+                    <option value="4">4</option>
                   </select>
                 </label>
                 <button class="primary-button control-generate-button" id="generateButtonOutput" type="button">Generate</button>

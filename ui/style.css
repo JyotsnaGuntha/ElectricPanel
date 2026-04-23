@@ -292,6 +292,12 @@ select {
   font-size: 0.86rem;
 }
 
+input::placeholder {
+  font-size: 0.74rem;
+  color: var(--muted);
+  opacity: 0.9;
+}
+
 body[data-theme="light"] input[type="number"],
 body[data-theme="light"] select {
   background: #ffffff;

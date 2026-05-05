@@ -317,16 +317,14 @@ h1 {
   z-index: 1;
   width: min(720px, calc(100vw - 32px));
   max-height: min(82vh, 760px);
-  overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--panel);
   box-shadow: var(--shadow);
   padding: 14px;
-}
-
-.upload-modal-header {
-  margin-bottom: 10px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 10px;
 }
 
 .upload-modal-close {
@@ -346,7 +344,6 @@ h1 {
   justify-items: center;
   gap: 10px;
   text-align: center;
-  margin-bottom: 10px;
 }
 
 .upload-dropzone.is-dragover {
@@ -358,7 +355,10 @@ h1 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
-  margin-bottom: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-right: 4px;
 }
 
 .upload-file-item {

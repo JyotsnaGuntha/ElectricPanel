@@ -362,11 +362,12 @@ h1 {
 }
 
 .upload-file-item {
+  position: relative;
   display: grid;
-  grid-template-rows: auto auto;
-  gap: 4px;
-  min-height: 72px;
-  padding: 6px 7px;
+  grid-template-rows: auto;
+  gap: 0;
+  min-height: auto;
+  padding: 5px 6px 5px 6px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: rgba(148, 163, 184, 0.08);
@@ -378,7 +379,8 @@ h1 {
 
 .upload-file-name {
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.73rem;
+  line-height: 1.1;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -387,28 +389,48 @@ h1 {
 }
 
 .upload-file-size {
-  margin-top: 1px;
-  font-size: 0.62rem;
+  margin-top: 0;
+  font-size: 0.48rem;
+  line-height: 1;
   color: var(--muted);
+}
+
+.upload-file-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .upload-file-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  margin-top: auto;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .upload-file-name-row {
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
 
-.upload-file-actions .plain-icon-button {
-  width: 26px;
-  height: 26px;
+.upload-file-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-file-header .plain-icon-button {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .upload-file-actions svg {
@@ -416,10 +438,11 @@ h1 {
 }
 
 .upload-file-preview-text {
-  font-size: 0.58rem;
+  font-size: 0.52rem;
+  line-height: 1;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .analysis-progress {
@@ -476,11 +499,6 @@ h1 {
   padding: 10px 0;
   display: grid;
   gap: 8px;
-}
-
-.upload-analysis-result.hidden {
-  display: block !important;
-  visibility: hidden;
 }
 
 .control-side {

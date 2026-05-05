@@ -267,19 +267,16 @@ function renderBillFileList() {
 
   list.innerHTML = state.uploadedBills
     .map((file, index) => `
-      <div class="upload-file-item">
-        <div class="upload-file-name-row">
-          <div class="upload-file-preview-text">PDF file</div>
-          <div class="upload-file-name">${file.name}</div>
-          <div class="upload-file-size">${formatFileSize(file.size)}</div>
-        </div>
-        <div class="upload-file-actions">
-          <button class="plain-icon-button upload-file-preview" type="button" data-preview-bill-index="${index}" aria-label="Preview ${file.name}" title="Preview ${file.name}">
-            ${getPreviewIconSvg()}
-          </button>
-          <button class="plain-icon-button upload-file-remove" type="button" data-remove-bill-index="${index}" aria-label="Remove ${file.name}" title="Remove ${file.name}">
-            ${getCloseIconSvg()}
-          </button>
+      <div class="upload-file-item" data-preview-bill-index="${index}" role="button" tabindex="0" aria-label="Click to preview ${file.name}">
+        <button class="plain-icon-button upload-file-remove" type="button" data-remove-bill-index="${index}" aria-label="Remove ${file.name}" title="Remove ${file.name}">
+          ${getCloseIconSvg()}
+        </button>
+        <div class="upload-file-header">
+          <div class="upload-file-name-row">
+            <div class="upload-file-preview-text">PDF</div>
+            <div class="upload-file-name">${file.name}</div>
+            <div class="upload-file-size">${formatFileSize(file.size)}</div>
+          </div>
         </div>
       </div>
     `)
@@ -842,21 +839,19 @@ function bindEvents() {
     if (solarInput) solarInput.focus();
   });
   $("billFilesList").addEventListener("click", (event) => {
-    const actionButton = event.target.closest("button[data-remove-bill-index], button[data-preview-bill-index]");
-    if (!actionButton) {
+    const removeButton = event.target.closest("button[data-remove-bill-index]");
+    if (removeButton) {
+      const removeIndex = removeButton.getAttribute("data-remove-bill-index");
+      state.uploadedBills.splice(Number(removeIndex), 1);
+      renderBillFileList();
       return;
     }
-    const removeIndex = actionButton.getAttribute("data-remove-bill-index");
-    const previewIndex = actionButton.getAttribute("data-preview-bill-index");
-    if (previewIndex !== null && previewIndex !== undefined) {
+    
+    const fileCard = event.target.closest("[data-preview-bill-index]");
+    if (fileCard) {
+      const previewIndex = fileCard.getAttribute("data-preview-bill-index");
       openFilePreview(Number(previewIndex));
-      return;
     }
-    if (removeIndex === null || removeIndex === undefined) {
-      return;
-    }
-    state.uploadedBills.splice(Number(removeIndex), 1);
-    renderBillFileList();
   });
 
   $("themeToggle").addEventListener("click", async () => {

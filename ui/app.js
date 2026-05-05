@@ -14,6 +14,9 @@ const state = {
   ...DEFAULT_STATE,
   lastDesign: null,
   hasPendingChanges: false,
+  solarRecommendation: null,
+  solarInputMode: "upload",
+  uploadedBills: [],
 };
 
 const FULLSCREEN_MIN_ZOOM = 1;
@@ -30,6 +33,8 @@ let fullscreenDragBasePanX = 0;
 let fullscreenDragBasePanY = 0;
 
 const elements = {};
+
+const MAX_BILL_UPLOADS = 20;
 
 function $(id) {
   return document.getElementById(id);
@@ -127,6 +132,145 @@ function formatInputValue(value) {
 
 function collectDynamicInputValues(containerId) {
   return Array.from($(containerId).querySelectorAll("input")).map((input) => parseOptionalNumber(input.value));
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 1024) {
+    return `${Math.max(0, Math.round(bytes || 0))} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function setSolarInputMode(mode, recommendation = null) {
+  state.solarInputMode = mode;
+  state.solarRecommendation = recommendation;
+  const solarField = $("solarKwField");
+  const solarInput = $("solarKw");
+  const recommendationChip = $("solarRecommendationChip");
+  const recommendedInline = $("recommendedInline");
+  const uploadAgainButton = $("uploadBillsAgainButton");
+  const uploadStatus = $("solarUploadStatus");
+
+  if (mode === "upload") {
+    if (solarField) solarField.classList.add("hidden");
+    if (recommendationChip) recommendationChip.classList.add("hidden");
+    if (recommendedInline) recommendedInline.classList.add("hidden");
+    if (uploadAgainButton) uploadAgainButton.classList.add("hidden");
+    if (uploadStatus) uploadStatus.textContent = "Upload multiple PDF bills and let the app recommend a solar value.";
+    return;
+  }
+
+  if (solarField) solarField.classList.remove("hidden");
+  if (uploadAgainButton) uploadAgainButton.classList.remove("hidden");
+
+  if (mode === "recommended" && recommendation !== null) {
+    if (solarInput) solarInput.value = formatInputValue(Number(recommendation));
+    if (recommendationChip) recommendationChip.classList.remove("hidden");
+    if (recommendedInline) {
+      recommendedInline.textContent = `Recommended: ${Number(recommendation)} kW`;
+      recommendedInline.classList.remove("hidden");
+    }
+    if (uploadStatus) uploadStatus.textContent = "Recommended value applied from your uploaded energy bills.";
+  } else {
+    if (mode === "manual" && solarInput) {
+      solarInput.value = "";
+    }
+    if (recommendationChip) recommendationChip.classList.add("hidden");
+    if (recommendedInline) recommendedInline.classList.add("hidden");
+    if (uploadStatus) uploadStatus.textContent = "Enter solar capacity manually or upload bills for a recommendation.";
+  }
+}
+
+function renderBillFileList() {
+  const list = $("billFilesList");
+  if (!state.uploadedBills.length) {
+    list.innerHTML = "<p class='card-note'>No files selected yet.</p>";
+    return;
+  }
+
+  list.innerHTML = state.uploadedBills
+    .map((file, index) => `
+      <div class="upload-file-item">
+        <div class="upload-file-meta">
+          <div class="upload-file-name">${file.name}</div>
+          <div class="upload-file-size">${formatFileSize(file.size)}</div>
+        </div>
+        <button class="ghost-button upload-file-remove" type="button" data-remove-bill-index="${index}">Remove</button>
+      </div>
+    `)
+    .join("");
+}
+
+function openUploadModal() {
+  $("uploadModal").classList.remove("hidden");
+  $("uploadAnalysisResult").classList.add("hidden");
+  $("billFilesInput").value = "";
+  $("analyzeBillsButton").disabled = false;
+  renderBillFileList();
+}
+
+function closeUploadModal() {
+  $("uploadModal").classList.add("hidden");
+  $("uploadDropzone").classList.remove("is-dragover");
+}
+
+async function fileToUploadPayload(file) {
+  return {
+    name: file.name,
+    type: file.type || "application/pdf",
+    size: file.size,
+    content: await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+      reader.readAsDataURL(file);
+    }),
+  };
+}
+
+async function addUploadedBills(files) {
+  const pdfFiles = Array.from(files || []).filter((file) => {
+    const fileName = String(file?.name || "").toLowerCase();
+    const fileType = String(file?.type || "");
+    return fileType === "application/pdf" || fileName.endsWith(".pdf") || Boolean(file?.content);
+  });
+  if (!pdfFiles.length) {
+    window.alert("Please select PDF files only.");
+    return;
+  }
+
+  const remainingSlots = Math.max(0, MAX_BILL_UPLOADS - state.uploadedBills.length);
+  const nextFiles = await Promise.all(
+    pdfFiles.slice(0, remainingSlots).map((file) => {
+      if (file?.content) {
+        return {
+          name: file.name,
+          type: file.type || "application/pdf",
+          size: file.size || 0,
+          content: file.content,
+        };
+      }
+      return fileToUploadPayload(file);
+    }),
+  );
+  state.uploadedBills = [...state.uploadedBills, ...nextFiles];
+  renderBillFileList();
+}
+
+function handleBillDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  $("uploadDropzone").classList.remove("is-dragover");
+  if (event.dataTransfer?.files?.length) {
+    addUploadedBills(event.dataTransfer.files);
+  }
+}
+
+async function filesToPayload(files) {
+  return files;
 }
 
 function enhanceNumberSteppers(scope = document) {
@@ -416,6 +560,51 @@ async function generateDesign() {
   }
 }
 
+async function analyzeBillUploads() {
+  if (!state.uploadedBills.length) {
+    window.alert("Add at least one PDF bill before analyzing.");
+    return;
+  }
+
+  const api = await waitForApi();
+  setLoading(true);
+  try {
+    const files = await filesToPayload(state.uploadedBills);
+    const response = await api.analyze_bills({ files });
+    if (!response || response.ok === false) {
+      throw new Error(response?.error || "Bill analysis failed");
+    }
+
+      $("recommendedSolarLabel").textContent = `Recommended Solar Capacity: ${response.recommended_kw} kW`;
+      $("uploadAnalysisResult").classList.remove("hidden");
+      $("analyzeBillsButton").disabled = true;
+      state.solarRecommendation = response.recommended_kw;
+      const recommendedInline = $("recommendedInline");
+      if (recommendedInline) {
+        recommendedInline.textContent = `Recommended: ${response.recommended_kw} kW`;
+        recommendedInline.classList.remove("hidden");
+      }
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function chooseBillFiles() {
+  const api = await waitForApi();
+  if (window.pywebview?.api?.pick_bill_files) {
+    const response = await api.pick_bill_files();
+    if (!response || response.ok === false) {
+      return;
+    }
+    await addUploadedBills(response.files || []);
+    return;
+  }
+
+  $("billFilesInput").click();
+}
+
 async function refreshThemeForLastDesign() {
   if (!state.lastDesign?.inputs) {
     return;
@@ -477,6 +666,9 @@ async function loadInitialState() {
   state.outgoing_ratings = initial.outgoing_ratings ?? DEFAULT_STATE.outgoing_ratings;
   state.busbar_material = initial.busbar_material ?? DEFAULT_STATE.busbar_material;
   state.num_poles = initial.num_poles ?? DEFAULT_STATE.num_poles;
+  state.solarRecommendation = state.solar_kw;
+  state.solarInputMode = state.solar_kw ? "recommended" : "upload";
+  state.uploadedBills = [];
 
   $("solarKw").value = formatInputValue(parseOptionalNumber(state.solar_kw));
   $("gridKw").value = formatInputValue(parseOptionalNumber(state.grid_kw));
@@ -492,9 +684,52 @@ async function loadInitialState() {
 
   setPreviewPlaceholders();
   renderDynamicFields();
+  setSolarInputMode(state.solarInputMode, state.solarRecommendation);
 }
 
 function bindEvents() {
+  $("uploadBillsButton").addEventListener("click", openUploadModal);
+  const uploadAgainEl = $("uploadBillsAgainButton");
+  if (uploadAgainEl) uploadAgainEl.addEventListener("click", openUploadModal);
+  $("uploadModalClose").addEventListener("click", closeUploadModal);
+  $("uploadModalBackdrop").addEventListener("click", closeUploadModal);
+  $("cancelUploadButton").addEventListener("click", closeUploadModal);
+  $("selectFilesButton").addEventListener("click", chooseBillFiles);
+  $("billFilesInput").addEventListener("change", async (event) => addUploadedBills(event.target.files));
+  $("analyzeBillsButton").addEventListener("click", analyzeBillUploads);
+  $("uploadDropzone").addEventListener("dragenter", (event) => {
+    event.preventDefault();
+    $("uploadDropzone").classList.add("is-dragover");
+  });
+  $("uploadDropzone").addEventListener("dragover", (event) => {
+    event.preventDefault();
+    $("uploadDropzone").classList.add("is-dragover");
+  });
+  $("uploadDropzone").addEventListener("dragleave", () => {
+    $("uploadDropzone").classList.remove("is-dragover");
+  });
+  $("uploadDropzone").addEventListener("drop", handleBillDrop);
+  $("proceedRecommendedButton").addEventListener("click", () => {
+    if (state.solarRecommendation !== null) {
+      setSolarInputMode("recommended", state.solarRecommendation);
+    }
+    closeUploadModal();
+  });
+  $("enterManuallyButton").addEventListener("click", () => {
+    setSolarInputMode("manual");
+    closeUploadModal();
+    const solarInput = $("solarKw");
+    if (solarInput) solarInput.focus();
+  });
+  $("billFilesList").addEventListener("click", (event) => {
+    const removeIndex = event.target.getAttribute("data-remove-bill-index");
+    if (removeIndex === null || removeIndex === undefined) {
+      return;
+    }
+    state.uploadedBills.splice(Number(removeIndex), 1);
+    renderBillFileList();
+  });
+
   $("themeToggle").addEventListener("click", async () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
     document.body.dataset.theme = state.theme;
@@ -594,6 +829,7 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeFullscreen();
+      closeUploadModal();
     }
   });
 
@@ -609,6 +845,11 @@ function bindEvents() {
       state.hasPendingChanges = true;
       renderDynamicFields();
     });
+  });
+
+  $("solarKw").addEventListener("input", () => {
+    state.solarInputMode = "manual";
+    $("solarRecommendationChip").classList.add("hidden");
   });
 
   document.addEventListener("input", (event) => {

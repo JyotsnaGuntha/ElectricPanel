@@ -4,6 +4,7 @@ Bridge between the JavaScript frontend and the Python design engine.
 
 from __future__ import annotations
 
+import base64
 import re
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,8 @@ from core.utils import (
     get_theme_colors,
     generate_busbar_spec,
 )
+from core.solar.calculator import calculate_bill_recommendation
+from core.solar.parser import parse_uploaded_bill_files
 
 
 def _as_int(value, default=0):
@@ -89,6 +92,57 @@ class MicrogridBridge:
             response = dict(design)
             response["bom_objects"] = design["bom_rows"]
             return response
+        except Exception as error:
+            return {"ok": False, "error": str(error)}
+
+    def analyze_bills(self, payload=None):
+        try:
+            payload = payload or {}
+            files = payload.get("files") or []
+            if not files:
+                raise ValueError("Please upload at least one PDF bill.")
+
+            parsed_rows = parse_uploaded_bill_files(files)
+            analysis = calculate_bill_recommendation(parsed_rows)
+            return {
+                "ok": True,
+                "recommended_kw": analysis["recommended_kw"],
+                "months": analysis["months"],
+            }
+        except Exception as error:
+            return {"ok": False, "error": str(error)}
+
+    def pick_bill_files(self):
+        try:
+            import webview
+
+            if not webview.windows:
+                return {"ok": False, "error": "Application window is not available."}
+
+            dialog_result = webview.windows[0].create_file_dialog(
+                webview.FileDialog.OPEN,
+                allow_multiple=True,
+                file_types=("PDF Files (*.pdf)",),
+            )
+            if not dialog_result:
+                return {"ok": False, "cancelled": True}
+
+            files = []
+            for file_path in dialog_result:
+                path = Path(file_path)
+                if path.suffix.lower() != ".pdf" or not path.exists():
+                    continue
+                files.append({
+                    "name": path.name,
+                    "size": path.stat().st_size,
+                    "type": "application/pdf",
+                    "content": base64.b64encode(path.read_bytes()).decode("ascii"),
+                })
+
+            if not files:
+                return {"ok": False, "error": "No PDF files were selected."}
+
+            return {"ok": True, "files": files}
         except Exception as error:
             return {"ok": False, "error": str(error)}
 

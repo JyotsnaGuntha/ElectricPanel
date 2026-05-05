@@ -30,10 +30,20 @@
         </div>
 
         <div class="control-stack">
+          <section class="card upload-card" id="solarUploadSection">
+            <div class="upload-card-copy">
+              <h3>Upload electricity bills to get solar capacity</h3>
+            </div>
+            <div class="upload-card-actions">
+              <button class="primary-button" id="uploadBillsButton" type="button">Upload electricity bills</button>
+              <span class="chip subtle hidden" id="recommendedInline" aria-live="polite">Recommended: -- kW</span>
+            </div>
+          </section>
+
           <div class="control-layout">
             <article class="card form-card control-main">
               <div class="grid one-col">
-                <label>
+                <label id="solarKwField" class="hidden">
                   <span>Solar (kWp)</span>
                   <input id="solarKw" type="number" min="0" step="1" placeholder="Enter solar capacity" />
                 </label>
@@ -167,6 +177,39 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div class="upload-modal hidden" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+    <div class="upload-modal-backdrop" id="uploadModalBackdrop"></div>
+    <div class="upload-modal-card">
+      <div class="card-title-row upload-modal-header">
+        <h3 id="uploadModalTitle">Upload Energy Bills</h3>
+        <button class="ghost-button upload-modal-close" id="uploadModalClose" type="button" aria-label="Close upload modal">×</button>
+      </div>
+
+      <div class="upload-dropzone" id="uploadDropzone">
+        <input id="billFilesInput" type="file" accept="application/pdf,.pdf" multiple hidden />
+        <p>Drag and drop PDF bills here</p>
+        <button class="icon-button" id="selectFilesButton" type="button">Select Files</button>
+        <span class="chip subtle">PDF only</span>
+      </div>
+
+      <div class="upload-file-list" id="billFilesList"></div>
+
+      <div class="upload-modal-actions">
+        <button class="primary-button" id="analyzeBillsButton" type="button">Analyze Bills</button>
+        <button class="ghost-button" id="cancelUploadButton" type="button">Cancel</button>
+      </div>
+
+      <div class="upload-analysis-result hidden" id="uploadAnalysisResult">
+        <strong id="recommendedSolarLabel">Recommended Solar Capacity: -- kW</strong>
+        <p>Would you like to proceed with this value or enter manually?</p>
+        <div class="upload-modal-actions">
+          <button class="primary-button" id="proceedRecommendedButton" type="button">Proceed with Recommended</button>
+          <button class="ghost-button" id="enterManuallyButton" type="button">Enter Manually</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="fullscreen-overlay hidden" id="fullscreenOverlay" role="dialog" aria-modal="true" aria-label="Diagram fullscreen preview">

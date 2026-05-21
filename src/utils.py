@@ -254,14 +254,51 @@ def calculate_row_width(ratings, mccb_db):
 # Busbar Specification
 # ============================================================================
 
-def generate_busbar_spec(total_busbar_current, busbar_material="Copper"):
+def generate_busbar_spec(total_busbar_current, busbar_material="Copper", 
+                        dg_mccbs=None, mccb_solar=0, mccb_grid=0):
     """
-    Generate busbar specification text based on current and material.
-    Returns: formatted string like "1 Set (20 x 20 mm Copper)"
-    """
-    from .constants import BUSBAR_DENSITY
+    Generate busbar specification with calculated dimensions.
     
-    density = BUSBAR_DENSITY.get(busbar_material, 1.0)
+    Uses engineering calculation based on total busbar current.
+    
+    Args:
+        total_busbar_current: Final total busbar current rating (A)
+        busbar_material: Material type ("Copper" or "Aluminium")
+        dg_mccbs: List of DG MCCB ratings (optional, for reference only)
+        mccb_solar: Solar MCCB rating (optional, for reference only)
+        mccb_grid: Grid MCCB rating (optional, for reference only)
+    
+    Returns:
+        Formatted string like "1 Set (Thickness: 5 mm × Height: 80 mm, Copper)"
+    """
+    
+    try:
+        # Use the engineering calculation methods directly
+        from .sld.calculations import SystemCalculations
+        
+        # Create a helper instance just to use the calculation methods
+        helper = SystemCalculations()
+        
+        # Step 2: Determine thickness based on I_total
+        thickness = helper.determine_busbar_thickness(total_busbar_current)
+        
+        # Step 3: Get current density for material
+        current_density = helper.get_current_density(busbar_material)
+        
+        # Step 4: Calculate cross-sectional area
+        area = total_busbar_current / current_density
+        
+        # Step 5: Calculate height
+        height = area / thickness
+        
+        return f"1 Set (Thickness: {thickness} mm × Height: {height:.1f} mm, {busbar_material})"
+    
+    except Exception:
+        # Fallback: Simplified calculation based on current density
+        pass
+    
+    # Fallback: Simplified calculation based on current density
+    density = {"Copper": 1.6, "Aluminium": 1.2}.get(busbar_material, 1.0)
     busbar_area = total_busbar_current / density
     suggested_width = math.ceil(busbar_area / 10 / 5) * 5
     if suggested_width < 20:

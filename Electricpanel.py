@@ -388,10 +388,6 @@ if submit:
         y_division = int(height * 0.40)   # ~380 px at h=950
         y_sources  = int(height * 0.17)   # ~160 px
         y_busbar   = int(height * 0.58)   # ~551 px (Tightened from 0.67)
-
-        # Scope divider
-        dwg.add(dwg.line((30, y_division), (width - 30, y_division),
-                         stroke="#475569", stroke_width=1, stroke_dasharray="8,4"))
         dwg.add(dwg.text("Customer Scope",
                          insert=(width / 2, 50),
                          font_size=20, font_weight="bold", fill="#94a3b8", text_anchor="middle"))
@@ -488,7 +484,7 @@ if submit:
         if active_ics_x:
             # Trunk inside Kirloskar scope, above I/C MCCBs
             comm_y = y_division + 25
-            # Top trunk
+            # Top trunk (dashed line for communication)
             dwg.add(dwg.line((active_ics_x[0], comm_y), (mgc_x - 12, comm_y),
                              stroke="#a78bfa", stroke_width=1.2, stroke_dasharray="6,3"))
             # Vertical drops from each incomer source to the comm trunk

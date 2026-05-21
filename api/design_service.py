@@ -112,7 +112,13 @@ class DesignService:
             )
 
         warning_flag = False
-        busbar_spec = generate_busbar_spec(total_busbar_current, busbar_material)
+        busbar_spec = generate_busbar_spec(
+            total_busbar_current, 
+            busbar_material,
+            dg_mccbs=system_calcs.dg_mccbs,
+            mccb_solar=system_calcs.mccb_solar,
+            mccb_grid=system_calcs.mccb_grid
+        )
 
         active_db = self._active_db()
         ga_svg_str, ga_svg_w, ga_svg_h, panel_w, panel_h, panel_d = generate_ga_svg(

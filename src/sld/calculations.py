@@ -101,7 +101,7 @@ class SystemCalculations:
             I_base (A): Maximum value between Part A and Part B
         """
         # Part A: Sum of all DG calculated currents
-        part_a = sum(self.dg_currents)
+        part_a = sum(self.dg_mccbs)
         
         # Part B: Sum of Solar + Grid calculated currents
         part_b = self.i_solar + self.i_grid
@@ -110,12 +110,11 @@ class SystemCalculations:
         i_base = max(part_a, part_b)
         return i_base
     
-    def calculate_final_busbar_current(self, safety_factor=1.1, diversity_factor=1.2):
+    def calculate_final_busbar_current(self, overload=1.1):
         """
         Calculate Final Total Busbar Current with safety and diversity factors.
         
-        I_total = I_base * safety_factor * diversity_factor
-        I_total = I_base * 1.1 * 1.2
+        i_total = i_base * overload
         
         Args:
             safety_factor: Safety factor (default 1.1)
@@ -125,7 +124,7 @@ class SystemCalculations:
             I_total (A): Final total busbar current rating
         """
         i_base = self.calculate_base_busbar_current()
-        i_total = i_base * safety_factor * diversity_factor
+        i_total = i_base * overload
         return i_total
     
     def determine_busbar_thickness(self, i_total):

@@ -184,9 +184,9 @@ def calculate_current_from_kva(kva, voltage=415, is_dg=True):
 
 def get_mccb_rating(current):
     """
-    Get MCCB rating with 1.25× safety margin.
+    Get MCCB rating with 1.2× safety margin.
     """
-    required = current * 1.25
+    required = current * 1.2 
     for rating in STANDARD_MCCBS:
         if rating >= required:
             return rating

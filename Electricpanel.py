@@ -239,7 +239,7 @@ def draw_mccb(dwg, x, y, rating, poles, label, side="left"):
         label_x, label_anchor = x - 35, "end"
     dwg.add(dwg.text(f"{rating} A, {poles}pole,", insert=(info_x, y - 5),
                      font_size=12, fill="#e2e8f0", text_anchor=anchor, font_family="Arial"))
-    dwg.add(dwg.text("Motorised MCCB",       insert=(info_x, y + 12),
+    dwg.add(dwg.text("MCCB",       insert=(info_x, y + 12),
                      font_size=11, fill="#94a3b8", text_anchor=anchor, font_family="Arial"))
     dwg.add(dwg.text(label,                  insert=(label_x, y + 5),
                      font_size=14, font_weight="bold", fill="#f1f5f9",

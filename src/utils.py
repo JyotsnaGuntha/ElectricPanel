@@ -111,14 +111,26 @@ def get_mccb_dims(rating, db):
     return active[sorted(active.keys())[-1]]
 
 
-def get_standard_rating(val):
+def get_available_ratings(db=None):
+    """
+    Get list of available MCCB ratings from database.
+    If no database provided, uses STANDARD_MCCBS fallback.
+    """
+    if db:
+        return sorted(db.keys())
+    return STANDARD_MCCBS
+
+
+def get_standard_rating(val, db=None):
     """
     Return nearest standard MCCB rating >= given value.
+    Uses provided database if available, otherwise falls back to STANDARD_MCCBS.
     """
-    for r in STANDARD_MCCBS:
+    ratings = get_available_ratings(db)
+    for r in ratings:
         if r >= val:
             return r
-    return STANDARD_MCCBS[-1]
+    return ratings[-1]
 
 
 # ============================================================================
@@ -182,15 +194,17 @@ def calculate_current_from_kva(kva, voltage=415, is_dg=True):
     return current
 
 
-def get_mccb_rating(current):
+def get_mccb_rating(current, db=None):
     """
     Get MCCB rating with 1.2× safety margin.
+    Uses provided database if available, otherwise falls back to STANDARD_MCCBS.
     """
     required = current * 1.2 
-    for rating in STANDARD_MCCBS:
+    ratings = get_available_ratings(db)
+    for rating in ratings:
         if rating >= required:
             return rating
-    return STANDARD_MCCBS[-1]
+    return ratings[-1]
 
 
 def get_mccb_breaking_capacity(mccb_rating):

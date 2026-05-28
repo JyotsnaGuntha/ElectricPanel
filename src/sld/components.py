@@ -6,19 +6,20 @@ Primitive drawing functions for MCCB, Tower, Solar, and MGC.
 import math
 
 
-def draw_mccb(dwg, x, y, rating, poles, label, theme_text="#e2e8f0", theme_sub="#94a3b8", side="left"):
+def draw_mccb(dwg, x, y, rating, poles, label, theme_text="#e2e8f0", theme_sub="#94a3b8", side="left", component_type="MCCB"):
     """
-    Draw MCCB symbol with label text.
+    Draw MCCB/ACB symbol with label text.
     
     Args:
         dwg: svgwrite Drawing object
-        x, y: Position of MCCB center
-        rating: MCCB current rating (A)
+        x, y: Position of MCCB/ACB center
+        rating: Current rating (A)
         poles: Number of poles
         label: Tag label (e.g., "I/C 1")
         theme_text: Text color
         theme_sub: Subtitle color
         side: "left" or "right" (affects label positioning)
+        component_type: "MCCB" or "ACB" - determines label text
     """
     dwg.add(dwg.line(start=(x, y - 50), end=(x, y - 18), stroke=theme_text, stroke_width=2))
     dwg.add(dwg.line(start=(x, y + 12), end=(x, y + 50), stroke=theme_text, stroke_width=2))
@@ -32,10 +33,12 @@ def draw_mccb(dwg, x, y, rating, poles, label, theme_text="#e2e8f0", theme_sub="
         info_x, anchor = x + 25, "start"
         label_x, label_anchor = x - 35, "end"
     
+    component_label = "ACB" if component_type == "ACB" else "MCCB"
+    
     dwg.add(dwg.text(f"{rating} A, {poles}pole,", 
                      insert=(info_x, y - 5), font_size=12, fill=theme_text, 
                      text_anchor=anchor, font_family="Arial"))
-    dwg.add(dwg.text("Motorised MCCB", 
+    dwg.add(dwg.text(component_label, 
                      insert=(info_x, y + 12), font_size=11, fill=theme_sub, 
                      text_anchor=anchor, font_family="Arial"))
     dwg.add(dwg.text(label, 

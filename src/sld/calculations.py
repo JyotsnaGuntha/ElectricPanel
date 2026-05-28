@@ -17,7 +17,7 @@ class SystemCalculations:
     Encapsulates all electrical calculations for SLD generation.
     """
     
-    def __init__(self, solar_kw=0, grid_kw=0, dg_ratings_kva=None):
+    def __init__(self, solar_kw=0, grid_kw=0, dg_ratings_kva=None, mccb_db=None):
         """
         Initialize system with source specifications.
         
@@ -25,10 +25,12 @@ class SystemCalculations:
             solar_kw: Solar PV capacity (kW)
             grid_kw: Grid supply capacity (kW)
             dg_ratings_kva: List of DG capacities (kVA)
+            mccb_db: Optional MCCB database dict with ratings as keys
         """
         self.solar_kw = solar_kw
         self.grid_kw = grid_kw
         self.dg_ratings_kva = dg_ratings_kva or []
+        self.mccb_db = mccb_db
         
         # Calculate currents
         self.i_solar = self._calculate_solar_current()
@@ -57,19 +59,19 @@ class SystemCalculations:
         for dg_kva in self.dg_ratings_kva:
             i = calculate_current_from_kva(dg_kva, NOMINAL_VOLTAGE, is_dg=True)
             currents.append(i)
-            mccbs.append(get_mccb_rating(i))
+            mccbs.append(get_mccb_rating(i, self.mccb_db))
         return currents, mccbs
     
     def _get_mccb_solar(self):
         """Get solar MCCB rating or 0 if no solar."""
         if self.solar_kw > 0:
-            return get_mccb_rating(self.i_solar)
+            return get_mccb_rating(self.i_solar, self.mccb_db)
         return 0
     
     def _get_mccb_grid(self):
         """Get grid MCCB rating or 0 if no grid."""
         if self.grid_kw > 0:
-            return get_mccb_rating(self.i_grid)
+            return get_mccb_rating(self.i_grid, self.mccb_db)
         return 0
     
     def get_all_incomers(self):

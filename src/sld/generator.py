@@ -31,6 +31,15 @@ def compute_canvas(n_dg, g_kw, s_kw, n_out):
     return int(width), SLD_HEIGHT, SLD_MIN_COL_SPACING, SLD_MIN_COL_SPACING, int(SLD_MARGIN_LEFT + 60)
 
 
+def get_component_type(rating):
+    """
+    Determine component type (MCCB or ACB) based on rating.
+    
+    If rating > 800 A, use ACB; otherwise use MCCB.
+    """
+    return "ACB" if rating > 800 else "MCCB"
+
+
 def generate_sld(
     system_calcs,
     num_outputs,
@@ -125,7 +134,7 @@ def generate_sld(
         dwg.add(dwg.line((cx, y_sources + 45), (cx, y_division + 50), 
                          stroke=theme_text, stroke_width=2))
         draw_mccb(dwg, cx, y_division + 100, system_calcs.dg_mccbs[i], num_poles, 
-                 f"I/C {ic_index}", theme_text, theme_sub, "left")
+                 f"I/C {ic_index}", theme_text, theme_sub, "left", get_component_type(system_calcs.dg_mccbs[i]))
         dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
                          stroke=theme_text, stroke_width=2))
         active_ics_x.append(cx)
@@ -143,7 +152,7 @@ def generate_sld(
         dwg.add(dwg.line((cx, y_sources + 30), (cx, y_division + 50), 
                          stroke=theme_text, stroke_width=2))
         draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_grid, num_poles, 
-                 f"I/C {ic_index}", theme_text, theme_sub, "left")
+                 f"I/C {ic_index}", theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_grid))
         dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
                          stroke=theme_text, stroke_width=2))
         active_ics_x.append(cx)
@@ -161,7 +170,7 @@ def generate_sld(
         dwg.add(dwg.line((cx, y_sources + 25), (cx, y_division + 50), 
                          stroke=theme_text, stroke_width=2))
         draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_solar, num_poles, 
-                 f"I/C {ic_index}", theme_text, theme_sub, "left")
+                 f"I/C {ic_index}", theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_solar))
         dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
                          stroke=theme_text, stroke_width=2))
         active_ics_x.append(cx)
@@ -215,7 +224,7 @@ def generate_sld(
         dwg.add(dwg.line((ox, y_busbar), (ox, y_busbar + 25), 
                          stroke=theme_text, stroke_width=2))
         draw_mccb(dwg, ox, y_busbar + 75, rating, num_poles, f"O/G {i + 1}", 
-                 theme_text, theme_sub, "right")
+                 theme_text, theme_sub, "right", get_component_type(rating))
         dwg.add(dwg.line((ox, y_busbar + 125), (ox, height - 80), 
                          stroke=theme_text, stroke_width=2))
     

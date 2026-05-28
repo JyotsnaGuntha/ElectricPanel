@@ -94,8 +94,9 @@ class DesignService:
         dg_ratings = [_as_float(value, 0) for value in dg_ratings]
         outgoing_ratings = [_as_float(value, 0) for value in outgoing_ratings]
 
-        mccb_outputs = [get_standard_rating(value) for value in outgoing_ratings]
-        system_calcs = SystemCalculations(solar_kw=solar_kw, grid_kw=grid_kw, dg_ratings_kva=dg_ratings)
+        active_db = self._active_db()
+        mccb_outputs = [get_standard_rating(value, active_db) for value in outgoing_ratings]
+        system_calcs = SystemCalculations(solar_kw=solar_kw, grid_kw=grid_kw, dg_ratings_kva=dg_ratings, mccb_db=active_db)
 
         incomer_list = list(system_calcs.dg_mccbs)
         if grid_kw > 0:
@@ -120,7 +121,6 @@ class DesignService:
             mccb_grid=system_calcs.mccb_grid
         )
 
-        active_db = self._active_db()
         ga_svg_str, ga_svg_w, ga_svg_h, panel_w, panel_h, panel_d = generate_ga_svg(
             incomer_list,
             mccb_outputs,

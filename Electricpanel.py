@@ -651,7 +651,7 @@ if submit:
         story.append(Paragraph("2. System Specifications", h2_style))
         specs_text = (
             f"<b>Total Busbar Current Rating:</b> {total_busbar_current:.2f}A<br/>"
-            f"<b>Total Outgoing Capacity:</b> {total_outgoing_rating:.0f}A<br/>"
+            # f"<b>Total Outgoing Capacity:</b> {total_outgoing_rating:.0f}A<br/>"
             f"<b>Recommended Busbar:</b> {busbar_spec}<br/>"
             f"<b>System Configuration:</b> {int(num_poles)}-Phase, {int(num_outputs)} Outgoing Feeders<br/>"
             

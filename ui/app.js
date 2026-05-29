@@ -596,7 +596,6 @@ function renderMetrics(design) {
   const summary = design.summary;
   const items = [
     ["Busbar Current", `${summary.total_busbar_current.toFixed(2)} A`],
-    ["Outgoing Capacity", `${summary.total_outgoing_rating.toFixed(0)} A`],
     ["Busbar Spec", summary.busbar_spec],
     ["Panel Size", `${design.ga.panel_w} × ${design.ga.panel_h} × ${design.ga.panel_d} mm`],
   ];

@@ -111,9 +111,13 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         total_units += row["total"]
 
     average_monthly_units = total_solar_usable_units / len(validated_rows)
-    # Formula: Solar Capacity (kW) = Total Units / 130
-    # Where 130 units/month = 1 kW of solar capacity
-    recommended_kw = _round_practical_kw(average_monthly_units / 130.0)
+    # Formula: Solar Capacity (kW) = Total Units / 30*4.2
+    
+    # 30 - days
+    # 4.2 - solar hrs per day
+    recommended_kw = _round_practical_kw(average_monthly_units / (30*4.2)) 
+    
+ 
 
     return {
         "months": len(validated_rows),

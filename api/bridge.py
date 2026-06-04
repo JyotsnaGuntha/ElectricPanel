@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from api.design_service import DesignService
+from src.utils import load_mccb_dimensions_from_file
 
 
 class MicrogridBridge:
@@ -16,7 +17,10 @@ class MicrogridBridge:
 
     def __init__(self):
         self.theme = "dark"
-        self.mccb_db = {}
+        # Load MCCB dimensions from Excel file in root folder
+        root_dir = Path(__file__).parent.parent
+        excel_path = root_dir / "Circuit_Breaker_Dimensions.xlsx"
+        self.mccb_db = load_mccb_dimensions_from_file(path=str(excel_path))
         self.last_payload = self._default_payload()
         self.design_service = DesignService(theme=self.theme, mccb_db=self.mccb_db)
 

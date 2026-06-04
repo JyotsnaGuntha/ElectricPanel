@@ -6,15 +6,7 @@ All values follow IEC 61439 and industry best practices.
 # ============================================================================
 # ELECTRICAL STANDARDS & CURRENT RATINGS
 # ============================================================================
-STANDARD_MCCBS = [
-    16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500,
-    630, 800, 1000, 1250, 1600, 2000, 2500
-]
-
-STANDARD_MCCBS_ALT = [
-    16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 320, 400, 500,
-    630, 800, 1000, 1250, 1600, 2000, 2500
-]
+# MCCB ratings are loaded from Circuit breaker_dimensions.xlsx
 
 # System electrical parameters
 NOMINAL_VOLTAGE = 415          # 3-phase, line-to-line (Volts)

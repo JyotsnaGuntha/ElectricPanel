@@ -8,7 +8,7 @@ import datetime
 import re
 
 from core.bom import generate_bom_items, generate_excel_bom, generate_ga_pdf, generate_pdf_report
-from core.constants import FALLBACK_MCCB_DB, STANDARD_MCCBS
+from core.constants import FALLBACK_MCCB_DB
 from core.ga import generate_ga_svg
 from core.sld import SystemCalculations, generate_sld
 from core.solar.calculator import calculate_bill_recommendation
@@ -225,7 +225,6 @@ class DesignService:
                 "warning_flag": warning_flag,
                 "busbar_chamber_height": get_busbar_chamber_height(total_busbar_current),
                 "busbar_thickness": get_busbar_thickness(total_busbar_current),
-                "standard_mccbs": STANDARD_MCCBS,
             },
             "sld": {
                 "svg": sld_svg,

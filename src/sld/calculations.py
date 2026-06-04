@@ -85,7 +85,7 @@ class SystemCalculations:
         return incomers
     
     # ========================================================================
-    # BUSBAR DIMENSION CALCULATIONS (Engineering Specification)
+    # BUSBAR DIMENSION CALCULATIONS
     # ========================================================================
     
     def calculate_base_busbar_current(self):
@@ -106,7 +106,7 @@ class SystemCalculations:
         part_a = sum(self.dg_mccbs)
         
         # Part B: Sum of Solar + Grid calculated currents
-        part_b = self.i_solar + self.i_grid
+        part_b = self.mccb_solar + self.mccb_grid
         
         # Base current is the maximum of the two
         i_base = max(part_a, part_b)

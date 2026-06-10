@@ -15,6 +15,7 @@ const state = {
   lastDesign: null,
   hasPendingChanges: false,
   solarRecommendation: null,
+  bessRecommendation: null,
   solarInputMode: "upload",
   uploadedBills: [],
 };
@@ -598,6 +599,7 @@ function renderMetrics(design) {
     ["Busbar Current", `${summary.total_busbar_current.toFixed(2)} A`],
     ["Busbar Spec", summary.busbar_spec],
     ["Panel Size", `${design.ga.panel_w} × ${design.ga.panel_h} × ${design.ga.panel_d} mm`],
+    ["BESS Capacity", state.bessRecommendation ? `${state.bessRecommendation} kWh` : "--"],
   ];
 
   $("summaryGrid").innerHTML = items
@@ -691,9 +693,11 @@ async function analyzeBillUploads() {
     }
 
     $("recommendedSolarLabel").textContent = `Suggested Solar Capacity: ${response.recommended_kw} kW`;
+    $("recommendedBessLabel").textContent = `Suggested BESS Capacity: ${response.recommended_bess_kwh} kWh`;
     $("uploadAnalysisResult").classList.remove("hidden");
     $("uploadAnalysisResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
     state.solarRecommendation = response.recommended_kw;
+    state.bessRecommendation = response.recommended_bess_kwh;
     setSolarInputMode("recommended", state.solarRecommendation);
     finishAnalysisProgress(true);
   } catch (error) {

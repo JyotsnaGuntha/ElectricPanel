@@ -12,12 +12,20 @@ Solar Capacity (kW) = (MP Units + NH Units) / 130
 Where 130 units/month = 1 kW of solar capacity
 
 Solar generation is considered only during MP and NH periods.
+
+BESS Calculation:
+1. Daily OP Units = Monthly OP Units / 30
+2. Average Hourly OP Units = Daily OP Units / 8
+3. Recommended BESS (kWh) = Average Hourly OP Units
+
 """
 
 from __future__ import annotations
 
 import math
 from typing import Any, Dict, Iterable
+
+OFF_PEAK_HOURS = 8
 
 
 def _round_up_to_step(value: float, step: int) -> int:
@@ -80,6 +88,11 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
     
     Formula: Solar Capacity (kW) = (MP Units + NH Units) / 130
     
+    BESS:
+        Daily OP Units = Monthly OP Units / 30
+        Average Hourly OP Units = Daily OP Units / 8
+        Recommended BESS (kWh) = Average Hourly OP Units
+        
     Returns:
         Dict with keys:
         - months: Number of bills analyzed
@@ -97,34 +110,64 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
     total_solar_usable_units = 0.0
     total_mp_units = 0.0
     total_nh_units = 0.0
+    total_op_units = 0.0
     total_units = 0.0
 
     # Calculate solar-usable units (MP + NH only, as these are solar generation hours)
     for row in validated_rows:
         mp_units = row["mp"]
         nh_units = row["nh"]
-        solar_usable = mp_units + nh_units
-        
-        total_solar_usable_units += solar_usable
+        op_units = row["op"]
+
+        solar_usable_units = mp_units + nh_units
+
+        total_solar_usable_units += solar_usable_units
         total_mp_units += mp_units
         total_nh_units += nh_units
+        total_op_units += op_units
         total_units += row["total"]
+    
+    months = len(validated_rows)
 
-    average_monthly_units = total_solar_usable_units / len(validated_rows)
+    # -----------------------------
+    # Solar Calculation
+    # -----------------------------
     # Formula: Solar Capacity (kW) = Total Units / 30*4.2
     
     # 30 - days
     # 4.2 - solar hrs per day
-    recommended_kw = _round_practical_kw(average_monthly_units / (30*4.2)) 
     
- 
+    average_monthly_units = total_solar_usable_units / months
+
+    recommended_kw = _round_practical_kw(
+        average_monthly_units / (30 * 4.2)
+    )
+
+    # -----------------------------
+    # BESS Calculation
+    # -----------------------------
+    average_monthly_op_units = total_op_units / months
+    daily_op_units = average_monthly_op_units / 30
+    average_hourly_op_units = daily_op_units / OFF_PEAK_HOURS
+    recommended_bess_kwh = math.ceil(average_hourly_op_units)
 
     return {
-        "months": len(validated_rows),
+        "months": months,
+
+        # Solar Metrics
         "mp_units": round(total_mp_units, 2),
         "nh_units": round(total_nh_units, 2),
         "solar_usable_units": round(total_solar_usable_units, 2),
         "average_monthly_units": round(average_monthly_units, 2),
         "recommended_kw": recommended_kw,
+
+        # BESS Metrics
+        "op_units": round(total_op_units, 2),
+        "average_monthly_op_units": round(average_monthly_op_units, 2),
+        "daily_op_units": round(daily_op_units, 2),
+        "average_hourly_op_units": round(average_hourly_op_units, 2),
+        "recommended_bess_kwh": recommended_bess_kwh,
+
+        # Reference
         "total_units": round(total_units, 2),
     }

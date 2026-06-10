@@ -69,6 +69,9 @@ class DesignService:
         analysis = calculate_bill_recommendation(parsed_rows)
         return {
             "recommended_kw": analysis["recommended_kw"],
+            "recommended_bess_kwh": analysis["recommended_bess_kwh"],
+            "average_monthly_op_units": analysis["average_monthly_op_units"],
+            "average_hourly_op_units": analysis["average_hourly_op_units"],
             "months": analysis["months"],
         }
 

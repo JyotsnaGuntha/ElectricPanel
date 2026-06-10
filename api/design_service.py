@@ -309,6 +309,7 @@ class DesignService:
             solar_kw=inputs["solar_kw"],
             grid_kw=inputs["grid_kw"],
             dg_ratings_kva=inputs.get("dg_ratings", []),
+            mccb_db=self._active_db(),
         )
 
         theme_colors = get_theme_colors("light")

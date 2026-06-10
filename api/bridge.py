@@ -17,10 +17,14 @@ class MicrogridBridge:
 
     def __init__(self):
         self.theme = "dark"
-        # Load MCCB dimensions from Excel file in root folder
-        root_dir = Path(__file__).parent.parent
-        excel_path = root_dir / "Circuit_Breaker_Dimensions.xlsx"
-        self.mccb_db = load_mccb_dimensions_from_file(path=str(excel_path))
+        self.mccb_db = {}
+        try:
+            local_db_path = Path("Circuit Breaker Dimensions.xlsx")
+            if local_db_path.exists():
+                from core.utils import load_mccb_dimensions_from_file
+                self.mccb_db = load_mccb_dimensions_from_file(path=str(local_db_path))
+        except Exception as e:
+            print(f"Error auto-loading local MCCB DB: {e}")
         self.last_payload = self._default_payload()
         self.design_service = DesignService(theme=self.theme, mccb_db=self.mccb_db)
 

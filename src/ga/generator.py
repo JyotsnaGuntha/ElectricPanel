@@ -9,13 +9,8 @@ import svgwrite as svg
 from .dimensions import compute_panel_dimensions
 from .styles import get_ga_colors
 from ..constants import (
-    PLINTH_H,
     CLEARANCE_PP,
     CLEARANCE_PE,
-    MCCB_COL_GAP,
-    ROW_GAP_MM,
-    SIDE_MARGIN,
-    TOP_MARGIN_H,
     GA_SVG_WIDTH,
     GA_SVG_HEIGHT,
     GA_LEFT_MARGIN,
@@ -61,9 +56,10 @@ def generate_ga_svg(
     Returns:
         (svg_string, svg_width, svg_height, panel_w_mm, panel_h_mm, panel_d_mm)
     """
-    # ────────────────────────────────────────────────────────────────────────
+    # Override plinth height to 300 mm per user request
+    PLINTH_H = 300
+
     # 1. Compute all real-world mm dimensions
-    # ────────────────────────────────────────────────────────────────────────
     pd_info = compute_panel_dimensions(incomer_mccbs, outgoing_mccbs, mccb_db, busbar_current)
     PANEL_W = pd_info["PANEL_W"]
     PANEL_H = pd_info["PANEL_H"]
@@ -73,21 +69,26 @@ def generate_ga_svg(
     BUSBAR_CH = pd_info["BUSBAR_CH_MM"]
     MAX_INC_H = pd_info["MAX_INC_H"]
     MAX_OUT_H = pd_info["MAX_OUT_H"]
-    OUT_ROWS = pd_info["OUT_ROWS"]
     busbar_thick = get_busbar_thickness(busbar_current)
 
-    # Mounting-plate internal zones (all in mm, top-to-bottom)
-    zone_top_margin = TOP_MARGIN_H
-    zone_incomer = MAX_INC_H
-    zone_gap1 = ROW_GAP_MM
-    zone_busbar = BUSBAR_CH
-    zone_gap2 = ROW_GAP_MM
-    zone_outgoing = OUT_ROWS * (MAX_OUT_H + ROW_GAP_MM)
-    zone_cable_duct = GA_BOTTOM_STRIP  # Use constant for cable duct
+    # Vertical positions in mm from top of panel:
+    # Top section height: MAX_OUT_H + 300
+    # y = 150 starts outgoing MCCBs row. Bottom-aligned at y = 150 + MAX_OUT_H.
+    # Busbar section starts at: y_busbar_start = MAX_OUT_H + 300
+    # Busbar section height: total_busbar_h = BUSBAR_CH * 4
+    # Busbar section ends at: y_busbar_end = y_busbar_start + total_busbar_h
+    # Bottom section (incomers) starts at: y_busbar_end. Height is exactly 1000 mm.
+    # Incomers are bottom-aligned at y = PANEL_H - 250 (leaves 250 mm for gland plate / cable entry).
+    
+    tallest_all_h = max(MAX_INC_H, MAX_OUT_H)
+    y_outgoing_row_bottom = 150 + tallest_all_h
+    y_busbar_start = tallest_all_h
+    total_busbar_h = BUSBAR_CH
+    y_busbar_end = y_busbar_start + total_busbar_h
+    y_incomer_row_bottom = PANEL_H - 250
 
-    # ────────────────────────────────────────────────────────────────────────
+
     # 2. SVG canvas & scale factors
-    # ────────────────────────────────────────────────────────────────────────
     SVG_W = GA_SVG_WIDTH
     SVG_H = GA_SVG_HEIGHT
 
@@ -97,7 +98,6 @@ def generate_ga_svg(
     if not include_spec_box:
         front_max_w = SVG_W - GA_LEFT_MARGIN - GA_ELEV_GAP - GA_SIDE_MAX_W - 20
     SCALE = min(front_max_w / PANEL_W, AVAIL_H / (PANEL_H + PLINTH_H))
-    # Side uses same vertical scale but independent horizontal scale
     SCALE_S = min(GA_SIDE_MAX_W / PANEL_D_, SCALE)
 
     def mm(val):
@@ -114,32 +114,20 @@ def generate_ga_svg(
     mF_W = mm(MOUNT_W)
     mF_H = mm(MOUNT_H)
 
-    # Zone heights in pixels (front view)
-    z_top = mm(zone_top_margin)
-    z_inc = mm(zone_incomer)
-    z_gap1 = mm(zone_gap1)
-    z_bb = mm(zone_busbar)
-    z_gap2 = mm(zone_gap2)
-    z_out = mm(zone_outgoing)
-    z_cd = mm(zone_cable_duct)
-
     # Positioning
     TOP_Y = 90
     if include_spec_box:
         FRONT_X = GA_LEFT_MARGIN
     else:
         FRONT_X = max(10, (SVG_W - (pF_W + GA_ELEV_GAP + pF_D)) / 2)
-    # Keep enough clearance for BB/I/C dimension annotations in preview mode.
     SIDE_GAP = GA_ELEV_GAP if include_spec_box else 72
     SIDE_X = FRONT_X + pF_W + SIDE_GAP
 
-    # Mounting plate top-left inside front view
-    mp_x = FRONT_X + (pF_W - mF_W) / 2
-    mp_y = TOP_Y + (pF_H - mF_H) / 2
+    # Mounting plate top-left inside front view (starts 50mm inset)
+    mp_x = FRONT_X + mm(50)
+    mp_y = TOP_Y + mm(50)
 
-    # ────────────────────────────────────────────────────────────────────────
     # 3. Colors (Responsive to Theme)
-    # ────────────────────────────────────────────────────────────────────────
     C = get_ga_colors(theme)
     BG = C["bg"]
     SHELL = C["shell"]
@@ -167,16 +155,12 @@ def generate_ga_svg(
     SPEC_GRID = "#1e3a5f" if is_dark_theme else "#cbd5e1"
     TITLE_STRIP_BG = "#060d1a" if is_dark_theme else "#e2e8f0"
 
-    # ────────────────────────────────────────────────────────────────────────
-    # 4. Create SVG
-    # ────────────────────────────────────────────────────────────────────────
+    # 4. Create SVG Drawing
     dwg = svg.Drawing(size=(SVG_W, SVG_H), profile="full")
     dwg.viewbox(0, 0, SVG_W, SVG_H)
     dwg.add(dwg.rect((0, 0), (SVG_W, SVG_H), fill=BG))
 
-    # ────────────────────────────────────────────────────────────────────────
     # 5. Helper functions
-    # ────────────────────────────────────────────────────────────────────────
     def arr_h(x1, x2, y, label, above=True):
         """Horizontal dim arrow with ticked ends."""
         sign = -1 if above else 1
@@ -186,7 +170,7 @@ def generate_ga_svg(
             dwg.add(dwg.line((tx, y - 5), (tx, y + 5), stroke=DIM_C, stroke_width=1.3))
             dwg.add(dwg.polygon([(tx, y), (tx + flip * 10, y - 4), (tx + flip * 10, y + 4)], fill=DIM_C))
         dwg.add(dwg.text(label, insert=((x1 + x2) / 2, lbl_y),
-                         font_size=11, fill=DIM_C, text_anchor="middle",
+                         font_size=max(8, mm(11)), fill=DIM_C, text_anchor="middle",
                          font_family="Arial", font_weight="bold"))
 
     def arr_v(x, y1, y2, label, right=True):
@@ -200,7 +184,7 @@ def generate_ga_svg(
             dwg.add(dwg.polygon([(x, ty), (x - 4, ty + flip * 10), (x + 4, ty + flip * 10)], fill=DIM_C))
         g = dwg.g(transform=f"rotate(-90,{lbl_x},{mid_y})")
         g.add(dwg.text(label, insert=(lbl_x, mid_y + 4),
-                       font_size=11, fill=DIM_C, text_anchor="middle",
+                       font_size=max(8, mm(11)), fill=DIM_C, text_anchor="middle",
                        font_family="Arial", font_weight="bold"))
         dwg.add(g)
 
@@ -226,151 +210,178 @@ def generate_ga_svg(
                            stroke=HATCH_C, stroke_width=0.7, stroke_opacity="0.4"))
         dwg.add(g)
 
-    def zone_label(label, x, y, w, h, fill=TEXT_C, fs=9):
-        """Centred text in a zone."""
-        dwg.add(dwg.text(label, insert=(x + w / 2, y + h / 2 + fs / 3),
-                         font_size=fs, fill=fill, text_anchor="middle",
-                         font_family="Arial", font_style="italic"))
-
-    # ────────────────────────────────────────────────────────────────────────
-    # 7. FRONT ELEVATION — outer shell + plinth
-    # ────────────────────────────────────────────────────────────────────────
+    # 6. FRONT ELEVATION — outer shell + plinth
     plinth_y = TOP_Y + pF_H
+    # Plinth
     dwg.add(dwg.rect(insert=(FRONT_X, plinth_y), size=(pF_W, pF_PL),
                      fill=BASE_PLINTH, stroke=STROKE, stroke_width=1.5))
     hatch(FRONT_X, plinth_y, pF_W, pF_PL, step=12)
+    # Main outer enclosure shell
     dwg.add(dwg.rect(insert=(FRONT_X, TOP_Y), size=(pF_W, pF_H),
                      fill=SHELL, stroke=STROKE, stroke_width=2.5))
+    # Bezel guide
     bz = 10
     dwg.add(dwg.rect(insert=(FRONT_X + bz, TOP_Y + bz), size=(pF_W - 2 * bz, pF_H - 2 * bz),
                      fill="none", stroke=PANEL_GUIDE, stroke_width=0.9, stroke_dasharray="8,5"))
 
-    # Mounting plate outline (dashed, no content inside)
+    # Mounting plate background
     dwg.add(dwg.rect(insert=(mp_x, mp_y), size=(mF_W, mF_H),
                      fill=MP_C, stroke=PLATE_STROKE, stroke_width=1.1, stroke_dasharray="6,4"))
 
-    # ── Internal zone dividers
-    cur_y = mp_y
+    # ── Busbar chamber layout
+    bb_top_px = TOP_Y + mm(y_busbar_start)
+    bb_h_px = mm(total_busbar_h)
+    dwg.add(dwg.rect(insert=(mp_x + 5, bb_top_px), size=(mF_W - 10, bb_h_px),
+                     fill="#1c1917" if is_dark_theme else "#f4f4f5",
+                     stroke=BB_ST, stroke_width=1.2, stroke_dasharray="4,2"))
+    # Busbar chamber header text
+    dwg.add(dwg.text(f"BUSBAR CHAMBER (4-POLE) — {BUSBAR_CH} mm",
+                     insert=(mp_x + mF_W / 2, bb_top_px + 14),
+                     font_size=max(8, mm(11)), fill=BB_ST, text_anchor="middle",
+                     font_family="Arial", font_weight="bold"))
 
-    # Zone 1: top margin
-    cur_y += z_top
-    # Zone 2: incomer row
-    inc_top = cur_y
-    cur_y += z_inc
-    inc_bot = cur_y
-    dwg.add(dwg.line((mp_x + 5, inc_bot), (mp_x + mF_W - 5, inc_bot),
-                     stroke=ZONE_ST, stroke_width=0.7, stroke_dasharray="5,3"))
+    # Render 4 horizontal busbars inside the chamber
+    colors_bb = ["#ef4444", "#f59e0b", "#3b82f6", "#4b5563" if is_dark_theme else "#9ca3af"]
+    phases_bb = ["L1 (Red)", "L2 (Yellow)", "L3 (Blue)", "Neutral"]
+    for idx_bb in range(4):
+        y_center_bb = y_busbar_start + (busbar_thick / 2) + idx_bb * (busbar_thick + 25)
+        bar_y_px = TOP_Y + mm(y_center_bb - busbar_thick / 2)
+        bar_h_px = mm(busbar_thick)
+        dwg.add(dwg.rect(insert=(mp_x + 10, bar_y_px), size=(mF_W - 20, bar_h_px),
+                         fill=colors_bb[idx_bb], stroke=TEXT_C, stroke_width=0.5))
+        # Add phase indicator text inside the busbar
+        dwg.add(dwg.text(phases_bb[idx_bb], insert=(mp_x + 25, bar_y_px + bar_h_px / 2 + 2.5),
+                         font_size=max(5.5, mm(8)), fill="#ffffff",
+                         font_family="Arial", font_weight="bold"))
 
-    cur_y += z_gap1
-    # Zone 3: busbar chamber
-    bb_bot = cur_y + z_bb
-    cur_y = bb_bot
-    cur_y += z_gap2
 
-    # Zone 4: outgoing row(s)
-    out_top = cur_y
-    cur_y += z_out
-    out_bot = cur_y
-    dwg.add(dwg.line((mp_x + 5, out_bot), (mp_x + mF_W - 5, out_bot),
-                     stroke=ZONE_ST, stroke_width=0.7, stroke_dasharray="5,3"))
+    # NOTE: Incoming and outgoing feeder MCCB drawings removed per user request.
 
-    # Zone 5: cable duct — hatched
-    duct_y = out_bot
-    hatch(mp_x + 5, duct_y, mF_W - 10, z_cd, step=8)
-    dwg.add(dwg.rect(insert=(mp_x + 5, duct_y), size=(mF_W - 10, z_cd),
+    # Cable entry duct / gland plate at bottom of mounting plate
+    duct_y_px = TOP_Y + mm(PANEL_H - 120)
+    duct_h_px = mm(70)
+    hatch(mp_x + 5, duct_y_px, mF_W - 10, duct_h_px, step=8)
+    dwg.add(dwg.rect(insert=(mp_x + 5, duct_y_px), size=(mF_W - 10, duct_h_px),
                      fill="none", stroke=ZONE_ST, stroke_width=0.7, stroke_dasharray="5,3"))
-    zone_label("Cable Duct / Gland Plate", mp_x, duct_y, mF_W, z_cd, fill=SUB_C, fs=9)
+    dwg.add(dwg.text("Cable Gland Plate / Entry Zone", insert=(mp_x + mF_W / 2, duct_y_px + duct_h_px / 2 + 3),
+                     font_size=max(8, mm(10)), fill=SUB_C, text_anchor="middle", font_family="Arial", font_style="italic"))
 
-    # Large HMI / Display (Centered with margins)
-    hmi_m = 35
-    hmi_x = FRONT_X + pF_W / 2 + hmi_m
-    hmi_w = (pF_W / 2 - bz) - 2 * hmi_m
-    hmi_y = TOP_Y + bz + hmi_m
-    hmi_h = inc_bot - hmi_y - hmi_m
-
-    dwg.add(dwg.rect(insert=(hmi_x, hmi_y), size=(hmi_w, hmi_h),
-                     fill=HMI_BG, stroke=PLATE_STROKE, stroke_width=1.8, rx=8))
-    dwg.add(dwg.text("HMI / DISPLAY",
-                     insert=(hmi_x + hmi_w / 2, hmi_y + hmi_h / 2 + 6),
-                     font_size=13, fill=HMI_TXT, text_anchor="middle",
-                     font_family="Arial", font_weight="bold"))
-
-    # Main front door split (double seam) + right-door knob.
+    # Door Split line & HMI Box (Front Door closed features overlayed)
     panel_split_x = FRONT_X + (pF_W / 2)
-    seam_gap = 2.8
-    dwg.add(dwg.line((panel_split_x - seam_gap, TOP_Y + bz), (panel_split_x - seam_gap, TOP_Y + pF_H - bz),
+    # Double door seam vertical line (solid line to show door properly per user request)
+    dwg.add(dwg.line((panel_split_x, TOP_Y + bz), (panel_split_x, TOP_Y + pF_H - bz),
                      stroke=MAIN_DOOR_STROKE, stroke_width=1.8))
-    dwg.add(dwg.line((panel_split_x + seam_gap, TOP_Y + bz), (panel_split_x + seam_gap, TOP_Y + pF_H - bz),
-                     stroke=MAIN_DOOR_STROKE, stroke_width=1.8))
-
-    knob_x = panel_split_x + 14
+    # Double door knob
+    knob_x = panel_split_x + 12
     knob_y = TOP_Y + (pF_H / 2)
-    dwg.add(dwg.circle(center=(knob_x, knob_y), r=4.0,
-                       fill=MAIN_DOOR_STROKE, stroke="none"))
+    dwg.add(dwg.circle(center=(knob_x, knob_y), r=4.5, fill=MAIN_DOOR_STROKE, stroke="none"))
+    dwg.add(dwg.circle(center=(knob_x, knob_y), r=2.0, fill=BG, stroke="none"))
 
-    # Labels
-    dwg.add(dwg.text("FRONT ELEVATION",
-                     insert=(FRONT_X + pF_W / 2, TOP_Y + pF_H + pF_PL + 20),
-                     font_size=12, fill=TEXT_C, text_anchor="middle",
+    # HMI / Display Cutout on the Door
+    # Measurement updated: width - 420mm and Height - 300mm
+    hmi_x_px = FRONT_X + mm((PANEL_W / 2 - 420) / 2)
+    hmi_y_px = TOP_Y + mm(20)
+    hmi_w_px = mm(420)
+    hmi_h_px = mm(300)
+    dwg.add(dwg.rect(insert=(hmi_x_px, hmi_y_px), size=(hmi_w_px, hmi_h_px),
+                     fill=HMI_BG, stroke=PLATE_STROKE, stroke_width=2.0, rx=6))
+    dwg.add(dwg.rect(insert=(hmi_x_px + 8, hmi_y_px + 8), size=(hmi_w_px - 16, hmi_h_px - 16),
+                     fill="none", stroke=ZONE_ST, stroke_width=0.8, rx=4))
+    
+    # Scale HMI text proportionally with the box size to completely prevent overflow
+    hmi_fs = max(8, mm(13))
+    hmi_sub_fs = max(6.5, mm(10))
+    dwg.add(dwg.text("HMI / TOUCH SCREEN",
+                     insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 - hmi_fs / 4),
+                     font_size=hmi_fs, fill=HMI_TXT, text_anchor="middle",
+                     font_family="Arial", font_weight="bold"))
+    dwg.add(dwg.text("Control Cutout",
+                     insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 + hmi_fs + 2),
+                     font_size=hmi_sub_fs, fill=SUB_C, text_anchor="middle",
+                     font_family="Arial", font_style="italic"))
+
+    # Labels for Front view
+    dwg.add(dwg.text("FRONT ELEVATION GA",
+                     insert=(FRONT_X + pF_W / 2, TOP_Y + pF_H + pF_PL + 22),
+                     font_size=max(10, mm(13)), fill=TEXT_C, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
 
-    # ────────────────────────────────────────────────────────────────────────
-    # 8. SIDE ELEVATION
-    # ────────────────────────────────────────────────────────────────────────
+    # 7. SIDE ELEVATION
+    # Plinth side view
     dwg.add(dwg.rect(insert=(SIDE_X, plinth_y), size=(pF_D, pF_PL),
                      fill=BASE_PLINTH, stroke=STROKE, stroke_width=1.5))
     hatch(SIDE_X, plinth_y, pF_D, pF_PL, step=12)
+    # Outer side shell
     dwg.add(dwg.rect(insert=(SIDE_X, TOP_Y), size=(pF_D, pF_H),
                      fill=SHELL, stroke=STROKE, stroke_width=2.5))
+    # Bezel
     dwg.add(dwg.rect(insert=(SIDE_X + bz, TOP_Y + bz), size=(pF_D - 2 * bz, pF_H - 2 * bz),
                      fill="none", stroke=PANEL_GUIDE, stroke_width=0.9, stroke_dasharray="8,5"))
+
+    # Internal Mounting Plate line in side view (50mm from back)
+    mp_x_side = SIDE_X + pF_D - mm_s(50)
+    dwg.add(dwg.line((mp_x_side, TOP_Y + mm(50)), (mp_x_side, TOP_Y + pF_H - mm(50)),
+                     stroke=PLATE_STROKE, stroke_width=2.0, stroke_dasharray="4,2"))
+    dwg.add(dwg.text("MP", insert=(mp_x_side - 8, TOP_Y + mm(80)),
+                     font_size=max(8, mm(10)), fill=PLATE_STROKE, text_anchor="end", font_family="Arial", font_weight="bold"))
+
+    # Busbars stacked vertically in Side View
+    for idx_bb in range(4):
+        y_center_bb = y_busbar_start + (busbar_thick / 2) + idx_bb * (busbar_thick + 25)
+        bar_y_side = TOP_Y + mm(y_center_bb)
+        # Draw each busbar as a circle representing its cross section profile
+        dwg.add(dwg.circle(center=(mp_x_side - mm_s(60), bar_y_side), r=mm(busbar_thick) / 2,
+                           fill=colors_bb[idx_bb], stroke=TEXT_C, stroke_width=0.5))
+
+    # HMI profile on front door (represented on the left side)
+    hmi_side_y = TOP_Y + mm(20)
+    hmi_side_h = mm(300) # Height updated to match front view (300mm)
+    hmi_side_d = mm_s(20) # 20 mm door panel projection depth
+    dwg.add(dwg.rect(insert=(SIDE_X, hmi_side_y), size=(hmi_side_d, hmi_side_h),
+                     fill=HMI_BG, stroke=PLATE_STROKE, stroke_width=1.2))
+    dwg.add(dwg.text("HMI", insert=(SIDE_X + hmi_side_d + 4, hmi_side_y + hmi_side_h / 2 + 3),
+                     font_size=max(8, mm(11)), fill=HMI_TXT, font_family="Arial", font_weight="bold"))
+
+
+    # Side label
     dwg.add(dwg.text("SIDE ELEVATION",
-                     insert=(SIDE_X + pF_D / 2, TOP_Y + pF_H + pF_PL + 20),
-                     font_size=12, fill=TEXT_C, text_anchor="middle",
+                     insert=(SIDE_X + pF_D / 2, TOP_Y + pF_H + pF_PL + 22),
+                     font_size=max(10, mm(13)), fill=TEXT_C, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
 
-    # ────────────────────────────────────────────────────────────────────────
-    # 9. Dimension arrows
-    # ────────────────────────────────────────────────────────────────────────
+    # 8. Dimension arrows and annotations
+    # Width dimension line (above front view)
     dim_y_top = TOP_Y - 44
     ext_h(FRONT_X, TOP_Y - 5, dim_y_top + 2)
     ext_h(FRONT_X + pF_W, TOP_Y - 5, dim_y_top + 2)
-    arr_h(FRONT_X, FRONT_X + pF_W, dim_y_top, f"{PANEL_W} mm")
+    arr_h(FRONT_X, FRONT_X + pF_W, dim_y_top, f"Width: {PANEL_W} mm")
 
-    dim_x_H = FRONT_X - 60
-    ext_v(TOP_Y, FRONT_X - 5, dim_x_H + 2)
-    ext_v(TOP_Y + pF_H, FRONT_X - 5, dim_x_H + 2)
+    # Height and Plinth vertical dimensions stacked continuously along a single vertical line on the left
+    dim_x_H = FRONT_X - 50
+    # extension lines for vertical stacked dimensions
+    ext_v(TOP_Y, FRONT_X - 5, dim_x_H - 5)
+    ext_v(TOP_Y + pF_H, FRONT_X - 5, dim_x_H - 5)
+    ext_v(TOP_Y + pF_H + pF_PL, FRONT_X - 5, dim_x_H - 5)
+    
+    # 1. Height arrow
     arr_v(dim_x_H, TOP_Y, TOP_Y + pF_H, f"{PANEL_H} mm", right=False)
+    # 2. Plinth arrow (continued on the same vertical line, name plinth removed, showing only measurement "300 mm")
+    arr_v(dim_x_H, TOP_Y + pF_H, TOP_Y + pF_H + pF_PL, "300 mm", right=False)
 
-    dim_x_PL = FRONT_X - 35
-    ext_v(TOP_Y + pF_H, FRONT_X - 5, dim_x_PL + 2)
-    ext_v(TOP_Y + pF_H + pF_PL, FRONT_X - 5, dim_x_PL + 2)
-    arr_v(dim_x_PL, TOP_Y + pF_H, TOP_Y + pF_H + pF_PL, f"{PLINTH_H} mm", right=False)
-
+    # Depth dimension line (above side view)
     ext_h(SIDE_X, TOP_Y - 5, dim_y_top + 2)
     ext_h(SIDE_X + pF_D, TOP_Y - 5, dim_y_top + 2)
-    arr_h(SIDE_X, SIDE_X + pF_D, dim_y_top, f"{PANEL_D_} mm")
+    arr_h(SIDE_X, SIDE_X + pF_D, dim_y_top, f"Depth: {PANEL_D_} mm")
 
-    mp_dim_y = mp_y + mF_H + 18
-    if mp_dim_y < TOP_Y + pF_H - 10:
-        ext_h(mp_x, mp_y + mF_H + 3, mp_dim_y + 2)
-        ext_h(mp_x + mF_W, mp_y + mF_H + 3, mp_dim_y + 2)
-        arr_h(mp_x, mp_x + mF_W, mp_dim_y, f"MP: {MOUNT_W} mm", above=False)
+    # NOTE: Clearance measurement near the HMI Touch board removed per user request.
 
-    mp_dim_x = mp_x + mF_W + 30
-    if mp_dim_x < FRONT_X + pF_W - 5:
-        ext_v(mp_y, mp_x + mF_W + 3, mp_dim_x - 2)
-        ext_v(mp_y + mF_H, mp_x + mF_W + 3, mp_dim_x - 2)
-        arr_v(mp_dim_x, mp_y, mp_y + mF_H, f"MP: {MOUNT_H} mm", right=True)
+    # Busbar chamber height dimension (between Front & Side)
+    dim_x_bb = FRONT_X + pF_W + 25
+    ext_v(bb_top_px, FRONT_X + pF_W, dim_x_bb - 2)
+    ext_v(bb_top_px + bb_h_px, FRONT_X + pF_W, dim_x_bb - 2)
+    arr_v(dim_x_bb, bb_top_px, bb_top_px + bb_h_px, f"Busbar Chamber: {BUSBAR_CH} mm", right=True)
 
-    inc_dim_x = FRONT_X + pF_W + 32
-    ext_v(inc_top, FRONT_X + pF_W, inc_dim_x - 2)
-    ext_v(inc_bot, FRONT_X + pF_W, inc_dim_x - 2)
-    arr_v(inc_dim_x, inc_top, inc_bot, f"I/C: {MAX_INC_H} mm", right=True)
-
-    # ────────────────────────────────────────────────────────────────────────
-    # 10. SPEC BOX (optional)
-    # ────────────────────────────────────────────────────────────────────────
+    # 9. SPEC BOX (optional)
     SB_W = 345
     SB_H = 240
     SB_X = SVG_W - SB_W - 16
@@ -421,9 +432,7 @@ def generate_ga_svg(
         dwg.add(dwg.rect(insert=(SB_X, SB_Y), size=(SB_W, SB_H),
                          fill="none", stroke=SPEC_BD, stroke_width=1.8, rx=4))
 
-    # ────────────────────────────────────────────────────────────────────────
-    # 11. Title strip at bottom
-    # ────────────────────────────────────────────────────────────────────────
+    # 10. Title strip at bottom
     strip_reserved_w = SB_W + 28 if include_spec_box else 28
     strip_text_right_x = SVG_W - SB_W - 45 if include_spec_box else SVG_W - 45
     strip_y = SVG_H - GA_BOTTOM_STRIP
@@ -435,6 +444,6 @@ def generate_ga_svg(
     now_str = datetime.datetime.now().strftime("%d-%b-%Y")
     dwg.add(dwg.text(f"Date: {now_str}  |  Scale: NTS  |  IEC 61439 compliant",
                      insert=(strip_text_right_x, strip_y + GA_BOTTOM_STRIP / 2 + 5),
-                     font_size=9, fill=SUB_C, text_anchor="end", font_family="Arial"))
+                     font_size=max(8, mm(10)), fill=SUB_C, text_anchor="end", font_family="Arial"))
 
     return dwg.tostring(), SVG_W, SVG_H, PANEL_W, PANEL_H, PANEL_D_

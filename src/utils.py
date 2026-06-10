@@ -101,35 +101,32 @@ def get_mccb_dims(rating, db):
     Get MCCB dimensions for given rating from database.
     Falls back gracefully if rating not found.
     """
+    if db and rating in db:
+        return db[rating]
+    if rating in FALLBACK_MCCB_DB:
+        return FALLBACK_MCCB_DB[rating]
     active = db if db else FALLBACK_MCCB_DB
-    if rating in active:
-        return active[rating]
     for k in sorted(active.keys()):
         if k >= rating:
             return active[k]
     return active[sorted(active.keys())[-1]]
 
 
-def get_available_ratings(db=None):
-    """
-    Get list of available MCCB ratings from database.
-    Database must be provided (loaded from Excel file).
-    """
-    if db:
-        return sorted(db.keys())
-    return []
-
-
 def get_standard_rating(val, db=None):
     """
     Return nearest standard MCCB rating >= given value.
-    Uses ratings from provided database (loaded from Excel file).
     """
-    ratings = get_available_ratings(db)
-    for r in ratings:
+    if db:
+        for r in sorted(db.keys()):
+            if r >= val:
+                return r
+        if db.keys():
+            return sorted(db.keys())[-1]
+
+    for r in STANDARD_MCCBS:
         if r >= val:
             return r
-    return ratings[-1] if ratings else int(val)
+    return STANDARD_MCCBS[-1]
 
 
 # ============================================================================
@@ -195,15 +192,11 @@ def calculate_current_from_kva(kva, voltage=415, is_dg=True):
 
 def get_mccb_rating(current, db=None):
     """
-    Get MCCB rating with 1.2× safety margin.
-    Uses ratings from provided database (loaded from Excel file).
+    Get MCCB rating with 1.25× safety margin.
     """
-    required = current * 1.2 
-    ratings = get_available_ratings(db)
-    for rating in ratings:
-        if rating >= required:
-            return rating
-    return ratings[-1] if ratings else int(required)
+    required = current * 1.25
+
+    return get_standard_rating(required, db)
 
 
 def get_mccb_breaking_capacity(mccb_rating):
@@ -267,51 +260,14 @@ def calculate_row_width(ratings, mccb_db):
 # Busbar Specification
 # ============================================================================
 
-def generate_busbar_spec(total_busbar_current, busbar_material="Copper", 
-                        dg_mccbs=None, mccb_solar=0, mccb_grid=0):
+def generate_busbar_spec(total_busbar_current, busbar_material="Copper"):
     """
-    Generate busbar specification with calculated dimensions.
-    
-    Uses engineering calculation based on total busbar current.
-    
-    Args:
-        total_busbar_current: Final total busbar current rating (A)
-        busbar_material: Material type ("Copper" or "Aluminium")
-        dg_mccbs: List of DG MCCB ratings (optional, for reference only)
-        mccb_solar: Solar MCCB rating (optional, for reference only)
-        mccb_grid: Grid MCCB rating (optional, for reference only)
-    
-    Returns:
-        Formatted string like "1 Set (Thickness: 5 mm × Height: 80 mm, Copper)"
+    Generate busbar specification text based on current and material.
+    Returns: formatted string like "1 Set (20 x 20 mm Copper)"
     """
+    from .constants import BUSBAR_DENSITY
     
-    try:
-        # Use the engineering calculation methods directly
-        from .sld.calculations import SystemCalculations
-        
-        # Create a helper instance just to use the calculation methods
-        helper = SystemCalculations()
-        
-        # Step 2: Determine thickness based on I_total
-        thickness = helper.determine_busbar_thickness(total_busbar_current)
-        
-        # Step 3: Get current density for material
-        current_density = helper.get_current_density(busbar_material)
-        
-        # Step 4: Calculate cross-sectional area
-        area = total_busbar_current / current_density
-        
-        # Step 5: Calculate height
-        height = area / thickness
-        
-        return f"1 Set (Thickness: {thickness} mm × Height: {height:.1f} mm, {busbar_material})"
-    
-    except Exception:
-        # Fallback: Simplified calculation based on current density
-        pass
-    
-    # Fallback: Simplified calculation based on current density
-    density = {"Copper": 1.6, "Aluminium": 1.2}.get(busbar_material, 1.0)
+    density = BUSBAR_DENSITY.get(busbar_material, 1.0)
     busbar_area = total_busbar_current / density
     suggested_width = math.ceil(busbar_area / 10 / 5) * 5
     if suggested_width < 20:

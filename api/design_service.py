@@ -67,6 +67,7 @@ class DesignService:
 
         parsed_rows = parse_uploaded_bill_files(files)
         analysis = calculate_bill_recommendation(parsed_rows)
+        print("--------------------Bill analysis:", analysis)
         return {
             "recommended_kw": analysis["recommended_kw"],
             "recommended_bess_kwh": analysis["recommended_bess_kwh"],

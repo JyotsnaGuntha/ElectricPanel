@@ -2,15 +2,21 @@
 __pycache__/
 *.py[cod]
 
+# Virtual environments
+venv/
+venv311/
+
+# Environment variables
+.env
+*.env
+
 # Build and distribution outputs
 build/
 dist/
-*.spec.bak
-
-# Generated temporary exports
-temp_*.svg
-*.pdf
 
 # OS/editor artifacts
 .DS_Store
 Thumbs.db
+
+# VS Code
+.vscode/

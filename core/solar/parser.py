@@ -11,6 +11,28 @@ from typing import Any, Dict, Iterable, List
 
 import pdfplumber
 
+import os
+from dotenv import load_dotenv
+from llama_parse import LlamaParse
+load_dotenv()
+
+parser = LlamaParse(
+    api_key=os.getenv("LLAMA_CLOUD_API_KEY"),
+    result_type="markdown"
+)
+
+# from openai import OpenAI
+# import json
+
+# client = OpenAI(
+#     api_key=os.getenv("OPENAI_API_KEY")
+# )
+
+import google.generativeai as genai
+genai.configure(api_key=os.getenv("GEMINI_KEY"))
+model = genai.GenerativeModel(
+    "gemini-2.5-flash"
+)
 
 def _decode_uploaded_pdf(content: Any) -> bytes:
     if not content:
@@ -347,15 +369,180 @@ def _extract_monthly_usage_rows(pdf_bytes: bytes) -> List[Dict[str, float]]:
     return unique_rows
 
 
-def parse_uploaded_bill_files(files: Iterable[Dict[str, Any]]) -> List[Dict[str, float]]:
-    rows: List[Dict[str, float]] = []
+# def parse_uploaded_bill_files(files: Iterable[Dict[str, Any]]) -> List[Dict[str, float]]:
+#     rows: List[Dict[str, float]] = []
+#     fallback_index = 1
+#     for file_payload in files or []:
+#         pdf_bytes = _decode_uploaded_pdf(file_payload.get("content"))
+#         file_rows = _extract_monthly_usage_rows(pdf_bytes)
+#         for row in file_rows:
+#             if not _clean_text(row.get("month")):
+#                 row["month"] = f"Entry {fallback_index}"
+#                 fallback_index += 1
+#             rows.append(row)
+#     return rows
+
+def parse_uploaded_bill_files(files):
+    rows = []
     fallback_index = 1
     for file_payload in files or []:
-        pdf_bytes = _decode_uploaded_pdf(file_payload.get("content"))
-        file_rows = _extract_monthly_usage_rows(pdf_bytes)
+        pdf_bytes = _decode_uploaded_pdf(
+            file_payload.get("content")
+        )
+        text = extract_bill_using_llamaparse(
+            pdf_bytes
+        )
+        print("\n========== LLAMAPARSE OUTPUT ==========\n")
+        print(text)
+        print("\n=======================================\n")
+        bill_json = extract_bill_json(text)
+
+        file_rows = [bill_json]
+
+        if not file_rows:
+            file_rows = _extract_month_rows_from_text(
+                text
+            )
         for row in file_rows:
             if not _clean_text(row.get("month")):
                 row["month"] = f"Entry {fallback_index}"
                 fallback_index += 1
             rows.append(row)
+
+        print(file_rows)
     return rows
+
+def extract_bill_using_llamaparse(pdf_bytes):
+
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(
+        suffix=".pdf",
+        delete=False
+    ) as temp_pdf:
+
+        temp_pdf.write(pdf_bytes)
+        temp_path = temp_pdf.name
+
+    documents = parser.load_data(temp_path)
+
+    return "\n".join(
+        doc.text for doc in documents
+    )
+    
+def _extract_llamaparse_table(text: str):
+
+    month = ""
+
+    month_match = re.search(
+        r"MONTH\s*/\s*YEAR\s*:\s*(\d{2}/\d{4})",
+        text,
+        re.IGNORECASE
+    )
+
+    if month_match:
+        month = month_match.group(1)
+
+    values = {}
+
+    for line in text.splitlines():
+
+        if not line.startswith("|"):
+            continue
+
+        cols = [c.strip() for c in line.split("|")]
+
+        if len(cols) < 6:
+            continue
+
+        slot = cols[1].upper()
+
+        if slot not in ["NH", "EP", "OP", "MP", "TOTAL"]:
+            continue
+
+        try:
+            unit_consumed = float(
+                cols[5].replace(",", "")
+            )
+        except:
+            continue
+
+        values[slot] = unit_consumed
+
+    if {"NH", "EP", "OP", "MP"}.issubset(values):
+
+        return [{
+            "month": month,
+            "nh": values["NH"],
+            "ep": values["EP"],
+            "op": values["OP"],
+            "mp": values["MP"],
+            "total": values.get(
+                "TOTAL",
+                values["NH"]
+                + values["EP"]
+                + values["OP"]
+                + values["MP"]
+            )
+        }]
+
+    return []
+
+
+import json
+
+def extract_bill_json(text: str):
+
+    prompt = f"""
+You are an expert electricity bill analyzer.
+
+Extract ONLY the following JSON.
+
+Rules:
+
+1. If NH EP OP MP exist, use them directly.
+
+2. If bill contains TOD slots:
+   A -> OP
+   B -> MP
+   C -> NH
+   D -> EP
+
+3. Extract UNIT CONSUMED values only.
+
+4. Never use:
+   - Current Reading
+   - Previous Reading
+   - Meter Reading
+
+5. Return ONLY JSON.
+
+Schema:
+
+{{
+    "month":"",
+    "nh":0,
+    "ep":0,
+    "op":0,
+    "mp":0,
+    "total":0
+}}
+
+Bill:
+
+{text}
+"""
+
+    response = model.generate_content(prompt)
+
+    content = response.text.strip()
+
+    if content.startswith("```json"):
+        content = content.replace("```json", "").replace("```", "").strip()
+    
+    print("------------------------GEMINI RESPONSE:")
+    print(content)
+
+    return json.loads(content)
+    
+    

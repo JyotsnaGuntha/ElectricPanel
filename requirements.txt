@@ -1,11 +1,28 @@
-pandas==3.0.2
+# Existing
+pandas==3.0.3
 svgwrite==1.4.3
 openpyxl>=3.0.0
-reportlab>=4.0.0
-svglib>=1.4.0
+reportlab==4.5.1
+svglib==1.6.0
 Pillow>=10.0.0
-pywebview>=5.4
+pywebview==6.2.1
+pdfplumber==0.11.9
+
+# Packaging
 pyinstaller>=6.0
 pywin32>=306
-pdfplumber>=0.11.0
 
+# New AI features
+google-generativeai==0.8.6
+llama-parse==0.6.94
+python-dotenv==1.2.2
+
+# pywebview Qt backend
+PyQt6==6.11.0
+QtPy==2.4.3
+
+# Supporting libraries
+requests==2.34.2
+protobuf==5.29.6
+
+streamlit==1.58.0

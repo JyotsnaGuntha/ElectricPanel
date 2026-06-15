@@ -165,6 +165,7 @@ class DesignService:
             panel_h,
             panel_w,
             panel_d,
+            active_db,
         )
 
         bom_rows = []

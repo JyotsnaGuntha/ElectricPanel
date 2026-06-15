@@ -19,7 +19,9 @@ class MicrogridBridge:
         self.theme = "dark"
         self.mccb_db = {}
         try:
-            local_db_path = Path("Circuit Breaker Dimensions.xlsx")
+            local_db_path = Path("Circuit_Breaker_Dimensions.xlsx")
+            if not local_db_path.exists():
+                local_db_path = Path("Circuit Breaker Dimensions.xlsx")
             if local_db_path.exists():
                 from core.utils import load_mccb_dimensions_from_file
                 self.mccb_db = load_mccb_dimensions_from_file(path=str(local_db_path))

@@ -50,6 +50,7 @@ def generate_bom_items(
     panel_h,
     panel_w,
     panel_d,
+    mccb_db=None,
 ):
     """
     Generate complete BOM item list.
@@ -69,6 +70,7 @@ def generate_bom_items(
         panel_h: Panel height (mm)
         panel_w: Panel width (mm)
         panel_d: Panel depth (mm)
+        mccb_db: Dictionary of MCCB ratings and dimensions
     
     Returns:
         list of BOMItem objects
@@ -77,7 +79,7 @@ def generate_bom_items(
     
     # Solar incomer
     if solar_kw > 0:
-        mccb_solar_ka = get_mccb_breaking_capacity(mccb_solar)
+        mccb_solar_ka = get_mccb_breaking_capacity(mccb_solar, mccb_db)
         items.append(BOMItem(
             f"MCCB {mccb_solar}A, {num_poles}P, {mccb_solar_ka}",
             f"{mccb_solar}A",
@@ -87,7 +89,7 @@ def generate_bom_items(
     
     # Grid incomer
     if grid_kw > 0:
-        mccb_grid_ka = get_mccb_breaking_capacity(mccb_grid)
+        mccb_grid_ka = get_mccb_breaking_capacity(mccb_grid, mccb_db)
         items.append(BOMItem(
             f"MCCB {mccb_grid}A, {num_poles}P, {mccb_grid_ka}",
             f"{mccb_grid}A",
@@ -98,7 +100,7 @@ def generate_bom_items(
     # DG incomers (grouped by rating)
     if num_dg > 0:
         for r, count in Counter(dg_mccbs).items():
-            mccb_ka = get_mccb_breaking_capacity(r)
+            mccb_ka = get_mccb_breaking_capacity(r, mccb_db)
             items.append(BOMItem(
                 f"MCCB {r}A, {num_poles}P, {mccb_ka}",
                 f"{r}A",
@@ -109,7 +111,7 @@ def generate_bom_items(
     # Outgoing feeders (grouped by rating)
     if mccb_outputs:
         for r, count in Counter(mccb_outputs).items():
-            mccb_ka = get_mccb_breaking_capacity(int(r))
+            mccb_ka = get_mccb_breaking_capacity(int(r), mccb_db)
             items.append(BOMItem(
                 f"MCCB {int(r)}A, {num_poles}P, {mccb_ka}",
                 f"{int(r)}A",

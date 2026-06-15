@@ -114,19 +114,17 @@ def get_mccb_dims(rating, db):
 
 def get_standard_rating(val, db=None):
     """
-    Return nearest standard MCCB rating >= given value.
+    Return nearest standard MCCB rating >= given value from the active database.
+    If no database is active, falls back to the keys of FALLBACK_MCCB_DB.
     """
-    if db:
-        for r in sorted(db.keys()):
-            if r >= val:
-                return r
-        if db.keys():
-            return sorted(db.keys())[-1]
-
-    for r in STANDARD_MCCBS:
+    active_db = db if db else FALLBACK_MCCB_DB
+    ratings = sorted(active_db.keys())
+    for r in ratings:
         if r >= val:
             return r
-    return STANDARD_MCCBS[-1]
+    if ratings:
+        return ratings[-1]
+    return 2500
 
 
 # ============================================================================
@@ -199,7 +197,7 @@ def get_mccb_rating(current, db=None):
     return get_standard_rating(required, db)
 
 
-def get_mccb_breaking_capacity(mccb_rating):
+def get_mccb_breaking_capacity(mccb_rating, db=None):
     """
     Return recommended MCCB breaking capacity (kA) from a full rating-wise table.
 
@@ -207,7 +205,7 @@ def get_mccb_breaking_capacity(mccb_rating):
     non-standard user-entered values are handled consistently.
     """
     rating = int(mccb_rating or 0)
-    standard_rating = get_standard_rating(rating)
+    standard_rating = get_standard_rating(rating, db)
 
     breaking_capacity_by_rating = {
         16: "16kA",
@@ -220,21 +218,28 @@ def get_mccb_breaking_capacity(mccb_rating):
         80: "25kA",
         100: "25kA",
         125: "25kA",
+        150: "25kA",
         160: "25kA",
         200: "36kA",
         250: "36kA",
         315: "36kA",
+        320: "36kA",
         400: "50kA",
         500: "50kA",
+        600: "50kA",
         630: "50kA",
         800: "65kA",
         1000: "65kA",
+        1200: "85kA",
         1250: "85kA",
         1600: "100kA",
         2000: "100kA",
         2500: "100kA",
+        3000: "100kA",
+        3200: "100kA",
+        4000: "100kA",
+        6000: "100kA",
     }
-    #dict.get(key, default)
     return breaking_capacity_by_rating.get(standard_rating, "36kA")
 
 

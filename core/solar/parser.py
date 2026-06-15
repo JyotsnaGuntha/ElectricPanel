@@ -29,7 +29,7 @@ parser = LlamaParse(
 # )
 
 import google.generativeai as genai
-genai.configure(api_key=os.getenv("GEMINI_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_KEY2") or os.getenv("GEMINI_API_KEY")or os.getenv("GEMINI_KEY"))
 model = genai.GenerativeModel(
     "gemini-2.5-flash"
 )

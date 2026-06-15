@@ -107,6 +107,7 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
     if not validated_rows:
         raise ValueError("No UNIT CONSUMED data was found in the uploaded PDFs.")
 
+    months = len(validated_rows)
     total_solar_usable_units = 0.0
     total_mp_units = 0.0
     total_nh_units = 0.0
@@ -115,13 +116,22 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
 
     # Calculate solar-usable units (MP + NH only, as these are solar generation hours)
     for row in validated_rows:
-        mp_units = row["mp"]
-        nh_units = row["nh"]
-        op_units = row["op"]
+        total_mp_units += row["mp"]
+        total_nh_units += row["nh"]
+        total_op_units += row["op"]
+        total_units += row["total"]
+        total_solar_usable_units += (row["mp"] + row["nh"])
 
-    average_monthly_units = total_solar_usable_units / len(validated_rows)
-    recommended_kw = _round_practical_kw(average_monthly_units / 130.0)
+    average_monthly_units = total_solar_usable_units / months
+    recommended_kw = _round_practical_kw(average_monthly_units / 126.0)
+    # 126 = 30*4.2
     bill_data = [{"mp": row["mp"], "ep": row["ep"], "total": row["total"], "month": row["month"]} for row in validated_rows]
+
+    # BESS calculations
+    average_monthly_op_units = total_op_units / months
+    daily_op_units = average_monthly_op_units / 30.0
+    average_hourly_op_units = daily_op_units / float(OFF_PEAK_HOURS)
+    recommended_bess_kwh = average_hourly_op_units
 
     return {
         "months": months,

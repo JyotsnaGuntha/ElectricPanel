@@ -75,19 +75,27 @@
                 </label>
                 <label>
                   <span>Busbar Material</span>
-                  <select id="busbarMaterial">
-                    <option value="" selected>Select</option>
-                    <option value="Copper">Copper</option>
-                    <option value="Aluminium">Aluminium</option>
-                  </select>
+                  <div class="custom-select" id="busbarMaterialDropdown" data-value="" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="custom-select-trigger">Select</span>
+                    <div class="custom-select-menu" role="listbox">
+                      <div class="custom-select-option" data-value="" role="option">Select</div>
+                      <div class="custom-select-option" data-value="Copper" role="option">Copper</div>
+                      <div class="custom-select-option" data-value="Aluminium" role="option">Aluminium</div>
+                    </div>
+                  </div>
+                  <input type="hidden" id="busbarMaterial" />
                 </label>
                 <label>
                   <span>System Phases / Poles</span>
-                  <select id="numPoles">
-                    <option value="" selected>Select</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                  </select>
+                  <div class="custom-select" id="numPolesDropdown" data-value="" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="custom-select-trigger">Select</span>
+                    <div class="custom-select-menu" role="listbox">
+                      <div class="custom-select-option" data-value="" role="option">Select</div>
+                      <div class="custom-select-option" data-value="3" role="option">3</div>
+                      <div class="custom-select-option" data-value="4" role="option">4</div>
+                    </div>
+                  </div>
+                  <input type="hidden" id="numPoles" />
                 </label>
                 <button class="primary-button control-generate-button" id="generateButtonOutput" type="button">Generate</button>
               </div>
@@ -216,9 +224,65 @@
       </div>
 
       <div class="upload-analysis-result hidden" id="uploadAnalysisResult">
-        <strong id="recommendedSolarLabel">Suggested Solar Capacity: -- kW</strong>
-        <strong id="recommendedBessLabel">Suggested BESS Capacity: -- kWh</strong>
-        <p id="uploadRecommendationPrompt">This suggested value has been auto-filled in Solar capacity. You can edit it manually if needed.</p>
+        <div class="capacity-metrics-row">
+          <div class="capacity-metric-box">
+            <span class="subtle">Suggested Solar Capacity</span>
+            <strong id="recommendedSolarLabel">-- kW</strong>
+          </div>
+          <div class="capacity-metric-box hidden" id="bessTopMetricBox">
+            <span class="subtle">BESS Capacity</span>
+            <strong id="bessCapacityLabel">-- kW / -- kWh</strong>
+            <span class="subtle-hours" id="bessHoursLabel">(Hours - --)</span>
+          </div>
+        </div>
+        <p id="uploadRecommendationPrompt">These suggested values have been auto-filled. You can edit them manually if needed.</p>
+
+        <!-- BESS Sizing Section -->
+        <div id="bessSizingSection" class="bess-sizing-section hidden">
+          <hr class="bess-divider" />
+            <div id="bessInsufficientMessage" class="bess-message hidden">
+              Upload energy bills to generate a BESS recommendation.
+            </div>
+            
+            <div id="bessCalculations" class="bess-calculations hidden">
+              <!-- Section 1: Uploaded Bills Summary -->
+              <div class="bess-tier">
+                <h4>Uploaded Bills Summary</h4>
+                <table class="bess-table">
+                  <thead>
+                    <tr><th>Bill Source</th><th>MP + EP (kWh)</th></tr>
+                  </thead>
+                <tbody id="bessBillsTbody">
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Section 2: System Factors -->
+            <div class="bess-tier">
+              <h4>System Factors</h4>
+                <div class="bess-factors-grid">
+                  <div class="bess-factor-card">
+                    <span class="subtle">Daily Consumption</span>
+                    <strong id="bessDailyConsumption">-- kWh/day</strong>
+                  </div>
+                  <div class="bess-factor-card">
+                    <span class="subtle">Round Trip Efficiency</span>
+                    <strong id="bessRte">85%</strong>
+                  </div>
+                  <div class="bess-factor-card">
+                    <span class="subtle">Depth of Discharge</span>
+                    <strong id="bessDod">90%</strong>
+                  </div>
+                  <div class="bess-factor-card">
+                    <span class="subtle">Peak Hours (MP+EP)</span>
+                    <strong id="bessPeakHrs">6 Hrs</strong>
+                  </div>
+                </div>
+            </div>
+
+          </div>
+        </div>
+
         <div class="upload-modal-actions">
           <button class="primary-button" id="proceedRecommendedButton" type="button">Proceed</button>
           <button class="ghost-button" id="enterManuallyButton" type="button">Edit</button>

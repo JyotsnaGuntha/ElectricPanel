@@ -50,17 +50,17 @@ def compute_panel_dimensions(incomer_mccbs, outgoing_mccbs, db, busbar_current_A
     max_out_h = max((get_mccb_dims(r, db)['h'] for r in outgoing_mccbs), default=200)
     tallest_all_h = max(max_inc_h, max_out_h)
 
-    # PANEL HEIGHT = 1000 till busbar + tallest MCCB height from all MCCBs
-    PANEL_H = 1000 + tallest_all_h
+    # Position busbar chamber below HMI screen (starts at 100mm, 300mm tall = 400mm total)
+    # Ensure clear separation from HMI by starting busbar at 420mm or tallest MCCB + margin
+    y_busbar_start = max(420, tallest_all_h + 150)
 
+    # PANEL HEIGHT = 1000 till busbar + busbar chamber height + busbar start position
+    PANEL_H = 1000 + busbar_ch_mm + y_busbar_start
 
     MOUNT_W = PANEL_W - 100
     MOUNT_H = PANEL_H - 100
 
-    # max_inc_h and max_out_h are already computed above
-
-
-    # Width of individual rows (for compatibility or debug)
+    # Calculate individual row widths for layout
     def row_width(ratings):
         if not ratings:
             return 0

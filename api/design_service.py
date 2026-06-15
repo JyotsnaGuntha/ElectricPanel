@@ -74,6 +74,7 @@ class DesignService:
             "average_monthly_op_units": analysis["average_monthly_op_units"],
             "average_hourly_op_units": analysis["average_hourly_op_units"],
             "months": analysis["months"],
+            "bill_data": analysis.get("bill_data", []),
         }
 
     def compute_design(self, payload):
@@ -95,10 +96,11 @@ class DesignService:
         dg_ratings = _normalize_list(payload.get("dg_ratings", []), num_dg, 0)
         outgoing_ratings = _normalize_list(payload.get("outgoing_ratings", []), num_outputs, 0)
 
+        active_db = self._active_db()
+
         dg_ratings = [_as_float(value, 0) for value in dg_ratings]
         outgoing_ratings = [_as_float(value, 0) for value in outgoing_ratings]
 
-        active_db = self._active_db()
         mccb_outputs = [get_standard_rating(value, active_db) for value in outgoing_ratings]
         system_calcs = SystemCalculations(solar_kw=solar_kw, grid_kw=grid_kw, dg_ratings_kva=dg_ratings, mccb_db=active_db)
 
@@ -117,14 +119,9 @@ class DesignService:
             )
 
         warning_flag = False
-        busbar_spec = generate_busbar_spec(
-            total_busbar_current, 
-            busbar_material,
-            dg_mccbs=system_calcs.dg_mccbs,
-            mccb_solar=system_calcs.mccb_solar,
-            mccb_grid=system_calcs.mccb_grid
-        )
+        busbar_spec = generate_busbar_spec(total_busbar_current, busbar_material)
 
+        active_db = self._active_db()
         ga_svg_str, ga_svg_w, ga_svg_h, panel_w, panel_h, panel_d = generate_ga_svg(
             incomer_list,
             mccb_outputs,
@@ -309,7 +306,6 @@ class DesignService:
             solar_kw=inputs["solar_kw"],
             grid_kw=inputs["grid_kw"],
             dg_ratings_kva=inputs.get("dg_ratings", []),
-            mccb_db=self._active_db(),
         )
 
         theme_colors = get_theme_colors("light")

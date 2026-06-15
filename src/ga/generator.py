@@ -72,17 +72,15 @@ def generate_ga_svg(
     busbar_thick = get_busbar_thickness(busbar_current)
 
     # Vertical positions in mm from top of panel:
-    # Top section height: MAX_OUT_H + 300
-    # y = 150 starts outgoing MCCBs row. Bottom-aligned at y = 150 + MAX_OUT_H.
-    # Busbar section starts at: y_busbar_start = MAX_OUT_H + 300
-    # Busbar section height: total_busbar_h = BUSBAR_CH * 4
-    # Busbar section ends at: y_busbar_end = y_busbar_start + total_busbar_h
-    # Bottom section (incomers) starts at: y_busbar_end. Height is exactly 1000 mm.
-    # Incomers are bottom-aligned at y = PANEL_H - 250 (leaves 250 mm for gland plate / cable entry).
+    # HMI Screen: positioned at 100mm-400mm (300mm tall)
+    # Busbar chamber: positioned below HMI to avoid overlap
     
     tallest_all_h = max(MAX_INC_H, MAX_OUT_H)
     y_outgoing_row_bottom = 150 + tallest_all_h
-    y_busbar_start = tallest_all_h
+    
+    # Busbar chamber positioned below HMI (starts at 100mm, 300mm tall, ends at 400mm)
+    # Add 20mm gap + 420mm minimum ensures clear separation
+    y_busbar_start = max(420, tallest_all_h + 150)
     total_busbar_h = BUSBAR_CH
     y_busbar_end = y_busbar_start + total_busbar_h
     y_incomer_row_bottom = PANEL_H - 250
@@ -147,8 +145,8 @@ def generate_ga_svg(
     is_dark_theme = theme == "dark"
     BASE_PLINTH = "#08121f" if is_dark_theme else "#e5e7eb"
     PANEL_GUIDE = "#2563eb" if is_dark_theme else "#94a3b8"
-    PLATE_STROKE = "#3b82f6" if is_dark_theme else "#94a3b8"
-    MAIN_DOOR_STROKE = "#f59e0b" if is_dark_theme else "#334155"
+    DOOR_STROKE = "#f59e0b" if is_dark_theme else "#334155"
+    HMI_STROKE = "#3b82f6" if is_dark_theme else "#94a3b8"
     HMI_BG = "#0a1a2e" if is_dark_theme else "#f8fafc"
     HMI_TXT = "#60a5fa" if is_dark_theme else "#334155"
     SPEC_HEADER_BG = "#0d3a4a" if is_dark_theme else "#e6f4f3"
@@ -226,7 +224,7 @@ def generate_ga_svg(
 
     # Mounting plate background
     dwg.add(dwg.rect(insert=(mp_x, mp_y), size=(mF_W, mF_H),
-                     fill=MP_C, stroke=PLATE_STROKE, stroke_width=1.1, stroke_dasharray="6,4"))
+                     fill=MP_C, stroke=HMI_STROKE, stroke_width=1.1, stroke_dasharray="6,4"))
 
     # ── Busbar chamber layout
     bb_top_px = TOP_Y + mm(y_busbar_start)
@@ -234,9 +232,9 @@ def generate_ga_svg(
     dwg.add(dwg.rect(insert=(mp_x + 5, bb_top_px), size=(mF_W - 10, bb_h_px),
                      fill="#1c1917" if is_dark_theme else "#f4f4f5",
                      stroke=BB_ST, stroke_width=1.2, stroke_dasharray="4,2"))
-    # Busbar chamber header text
+    # Busbar chamber header text (placed slightly above the chamber to not overlap the busbars)
     dwg.add(dwg.text(f"BUSBAR CHAMBER (4-POLE) — {BUSBAR_CH} mm",
-                     insert=(mp_x + mF_W / 2, bb_top_px + 14),
+                     insert=(mp_x + mF_W / 2, bb_top_px - 8),
                      font_size=max(8, mm(11)), fill=BB_ST, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
 
@@ -266,37 +264,129 @@ def generate_ga_svg(
     dwg.add(dwg.text("Cable Gland Plate / Entry Zone", insert=(mp_x + mF_W / 2, duct_y_px + duct_h_px / 2 + 3),
                      font_size=max(8, mm(10)), fill=SUB_C, text_anchor="middle", font_family="Arial", font_style="italic"))
 
-    # Door Split line & HMI Box (Front Door closed features overlayed)
-    panel_split_x = FRONT_X + (pF_W / 2)
-    # Double door seam vertical line (solid line to show door properly per user request)
-    dwg.add(dwg.line((panel_split_x, TOP_Y + bz), (panel_split_x, TOP_Y + pF_H - bz),
-                     stroke=MAIN_DOOR_STROKE, stroke_width=1.8))
-    # Double door knob
-    knob_x = panel_split_x + 12
-    knob_y = TOP_Y + (pF_H / 2)
-    dwg.add(dwg.circle(center=(knob_x, knob_y), r=4.5, fill=MAIN_DOOR_STROKE, stroke="none"))
-    dwg.add(dwg.circle(center=(knob_x, knob_y), r=2.0, fill=BG, stroke="none"))
+    # TECHNICAL CAD-STYLE DOUBLE-DOOR CABINET FRONT ELEVATION
+    # Create engineering drawing quality door representation
+    
+    # Main frame border (outermost edge)
+    frame_margin = 3
+    dwg.add(dwg.rect(insert=(FRONT_X + frame_margin, TOP_Y + frame_margin), 
+                     size=(pF_W - 2*frame_margin, pF_H - 2*frame_margin),
+                     fill="none", stroke=STROKE, stroke_width=2.2))
+    
+    # Inner frame (cabinet body)
+    inner_margin = 8
+    dwg.add(dwg.rect(insert=(FRONT_X + inner_margin, TOP_Y + inner_margin), 
+                     size=(pF_W - 2*inner_margin, pF_H - 2*inner_margin),
+                     fill="none", stroke=STROKE, stroke_width=1.4))
+    
+    # Center vertical seam (door split line)
+    center_x = FRONT_X + (pF_W / 2)
+    dwg.add(dwg.line((center_x, TOP_Y + 5), (center_x, TOP_Y + pF_H - 5),
+                     stroke=STROKE, stroke_width=1.6))
+    
+    # Horizontal midline for door symmetry
+    center_y = TOP_Y + (pF_H / 2)
+    
+    # LEFT DOOR - vertical handle (centered on door)
+    left_handle_x = center_x - 15
+    handle_height = mm(150)
+    left_handle_y_top = center_y - (handle_height / 2)
+    left_handle_y_bot = center_y + (handle_height / 2)
+    handle_width = 2.5
+    # Left handle vertical line
+    dwg.add(dwg.line((left_handle_x - handle_width, left_handle_y_top), 
+                     (left_handle_x - handle_width, left_handle_y_bot),
+                     stroke=STROKE, stroke_width=1.2))
+    # Left handle outline
+    dwg.add(dwg.rect(insert=(left_handle_x - handle_width*2.5, left_handle_y_top - 2), 
+                     size=(handle_width*5, left_handle_y_bot - left_handle_y_top + 4),
+                     fill="none", stroke=STROKE, stroke_width=0.8))
+    
+    # RIGHT DOOR - vertical handle (centered on door)
+    right_handle_x = center_x + 15
+    right_handle_y_top = center_y - (handle_height / 2)
+    right_handle_y_bot = center_y + (handle_height / 2)
+    # Right handle vertical line
+    dwg.add(dwg.line((right_handle_x + handle_width, right_handle_y_top), 
+                     (right_handle_x + handle_width, right_handle_y_bot),
+                     stroke=STROKE, stroke_width=1.2))
+    # Right handle outline
+    dwg.add(dwg.rect(insert=(right_handle_x - handle_width*2.5, right_handle_y_top - 2), 
+                     size=(handle_width*5, right_handle_y_bot - right_handle_y_top + 4),
+                     fill="none", stroke=STROKE, stroke_width=0.8))
+    
+    # PERIMETER FASTENING BOLTS/SCREWS - positioned around frame edges
+    bolt_radius = 1.8
+    bolt_positions = [
+        # Top edge bolts
+        (FRONT_X + 25, TOP_Y + 8),
+        (FRONT_X + pF_W - 25, TOP_Y + 8),
+        # Bottom edge bolts (above plinth)
+        (FRONT_X + 25, TOP_Y + pF_H - 8),
+        (FRONT_X + pF_W - 25, TOP_Y + pF_H - 8),
+        # Left edge bolts
+        (FRONT_X + 8, TOP_Y + 45),
+        (FRONT_X + 8, TOP_Y + pF_H - 45),
+        # Right edge bolts
+        (FRONT_X + pF_W - 8, TOP_Y + 45),
+        (FRONT_X + pF_W - 8, TOP_Y + pF_H - 45),
+        # Mid-height bolts on sides
+        (FRONT_X + 8, center_y - 30),
+        (FRONT_X + 8, center_y + 30),
+        (FRONT_X + pF_W - 8, center_y - 30),
+        (FRONT_X + pF_W - 8, center_y + 30),
+    ]
+    
+    for bolt_x, bolt_y in bolt_positions:
+        # Bolt circle (screw head)
+        dwg.add(dwg.circle(center=(bolt_x, bolt_y), r=bolt_radius,
+                          fill="none", stroke=STROKE, stroke_width=0.9))
+        # Bolt cross (screw slot)
+        dwg.add(dwg.line((bolt_x - bolt_radius*0.6, bolt_y), (bolt_x + bolt_radius*0.6, bolt_y),
+                        stroke=STROKE, stroke_width=0.7))
+        dwg.add(dwg.line((bolt_x, bolt_y - bolt_radius*0.6), (bolt_x, bolt_y + bolt_radius*0.6),
+                        stroke=STROKE, stroke_width=0.7))
+    
+    # DOOR FRAME CORNER REINFORCEMENT (small radius corners for door frame)
+    corner_radius = 4
+    corners = [
+        (FRONT_X + inner_margin, TOP_Y + inner_margin),  # Top-left
+        (FRONT_X + pF_W - inner_margin, TOP_Y + inner_margin),  # Top-right
+        (FRONT_X + inner_margin, TOP_Y + pF_H - inner_margin),  # Bottom-left
+        (FRONT_X + pF_W - inner_margin, TOP_Y + pF_H - inner_margin),  # Bottom-right
+    ]
+    
+    for corner_x, corner_y in corners:
+        # Small corner accent lines (reinforcement brackets)
+        dwg.add(dwg.line((corner_x, corner_y + corner_radius), (corner_x, corner_y + corner_radius*2),
+                        stroke=STROKE, stroke_width=0.7))
+        dwg.add(dwg.line((corner_x + corner_radius, corner_y), (corner_x + corner_radius*2, corner_y),
+                        stroke=STROKE, stroke_width=0.7))
 
-    # HMI / Display Cutout on the Door
-    # Measurement updated: width - 420mm and Height - 300mm
+    # HMI / Display Cutout on the Door (centered on left door half)
+    # Measurement: width 420mm, height 300mm
+    # Position HMI centered horizontally within left door half with proper top margin
     hmi_x_px = FRONT_X + mm((PANEL_W / 2 - 420) / 2)
-    hmi_y_px = TOP_Y + mm(20)
+    hmi_y_px = TOP_Y + mm(100)
     hmi_w_px = mm(420)
     hmi_h_px = mm(300)
+    
+    # Draw HMI cutout box with rounded corners
     dwg.add(dwg.rect(insert=(hmi_x_px, hmi_y_px), size=(hmi_w_px, hmi_h_px),
-                     fill=HMI_BG, stroke=PLATE_STROKE, stroke_width=2.0, rx=6))
+                     fill=HMI_BG, stroke=HMI_STROKE, stroke_width=2.0, rx=6))
+    # Inner border for depth effect
     dwg.add(dwg.rect(insert=(hmi_x_px + 8, hmi_y_px + 8), size=(hmi_w_px - 16, hmi_h_px - 16),
                      fill="none", stroke=ZONE_ST, stroke_width=0.8, rx=4))
     
-    # Scale HMI text proportionally with the box size to completely prevent overflow
+    # HMI text with proportional scaling
     hmi_fs = max(8, mm(13))
     hmi_sub_fs = max(6.5, mm(10))
     dwg.add(dwg.text("HMI / TOUCH SCREEN",
                      insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 - hmi_fs / 4),
                      font_size=hmi_fs, fill=HMI_TXT, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
-    dwg.add(dwg.text("Control Cutout",
-                     insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 + hmi_fs + 2),
+    dwg.add(dwg.text("Control Display",
+                     insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 + hmi_fs),
                      font_size=hmi_sub_fs, fill=SUB_C, text_anchor="middle",
                      font_family="Arial", font_style="italic"))
 
@@ -321,9 +411,9 @@ def generate_ga_svg(
     # Internal Mounting Plate line in side view (50mm from back)
     mp_x_side = SIDE_X + pF_D - mm_s(50)
     dwg.add(dwg.line((mp_x_side, TOP_Y + mm(50)), (mp_x_side, TOP_Y + pF_H - mm(50)),
-                     stroke=PLATE_STROKE, stroke_width=2.0, stroke_dasharray="4,2"))
+                     stroke=HMI_STROKE, stroke_width=2.0, stroke_dasharray="4,2"))
     dwg.add(dwg.text("MP", insert=(mp_x_side - 8, TOP_Y + mm(80)),
-                     font_size=max(8, mm(10)), fill=PLATE_STROKE, text_anchor="end", font_family="Arial", font_weight="bold"))
+                     font_size=max(8, mm(10)), fill=HMI_STROKE, text_anchor="end", font_family="Arial", font_weight="bold"))
 
     # Busbars stacked vertically in Side View
     for idx_bb in range(4):
@@ -333,12 +423,12 @@ def generate_ga_svg(
         dwg.add(dwg.circle(center=(mp_x_side - mm_s(60), bar_y_side), r=mm(busbar_thick) / 2,
                            fill=colors_bb[idx_bb], stroke=TEXT_C, stroke_width=0.5))
 
-    # HMI profile on front door (represented on the left side)
-    hmi_side_y = TOP_Y + mm(20)
-    hmi_side_h = mm(300) # Height updated to match front view (300mm)
-    hmi_side_d = mm_s(20) # 20 mm door panel projection depth
+    # HMI profile on front door (represented on side elevation)
+    hmi_side_y = TOP_Y + mm(100)  # Match front view HMI Y position
+    hmi_side_h = mm(300)  # Height matches front view
+    hmi_side_d = mm_s(20)  # 20 mm door panel projection depth
     dwg.add(dwg.rect(insert=(SIDE_X, hmi_side_y), size=(hmi_side_d, hmi_side_h),
-                     fill=HMI_BG, stroke=PLATE_STROKE, stroke_width=1.2))
+                     fill=HMI_BG, stroke=HMI_STROKE, stroke_width=1.2))
     dwg.add(dwg.text("HMI", insert=(SIDE_X + hmi_side_d + 4, hmi_side_y + hmi_side_h / 2 + 3),
                      font_size=max(8, mm(11)), fill=HMI_TXT, font_family="Arial", font_weight="bold"))
 

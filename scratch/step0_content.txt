@@ -1,0 +1,93 @@
+<USER_REQUEST>
+In the Electric Panel Project -- Update these change in the Present GA File file only correctly and accuratley. Create a complete IEC 61439 compliant GA (General Arrangement) drawing for a Microgrid Panel automatically from the SLD code and MCCB dimension database.
+Use all MCCB ratings directly from the SLD code. For every MCCB used in the SLD, fetch its actual dimensions (Height, Width, Depth) from the uploaded Excel sheet named “Circuit Breaker Dimensions”. Do not use fixed MCCB dimensions unless a value is missing in Excel.
+======================================== GA PANEL WIDTH CALCULATION RULES
+
+1. Arrange all MCCBs horizontally as per the SLD sequence.
+2. Keep:
+   * 90 mm clearance from right panel edge to first MCCB
+   * 90 mm clearance from left panel edge to last MCCB
+   * 150 mm spacing between every MCCB
+3. Total GA panel width calculation:
+PANEL WIDTH = Left Margin (90)
+   * Sum of all MCCB widths
+   * (150 × gaps between MCCBs)
+   * Right Margin (90)
+4. All MCCB widths must come dynamically from the Excel database.
+5. Incoming and outgoing MCCBs both must be considered for width calculations.
+======================================== GA PANEL HEIGHT CALCULATION RULES
+
+1. Height from panel bottom up to busbar chamber: Fixed = 1000 mm
+2. Determine the tallest MCCB from ALL MCCBs in the SLD (incoming or outgoing).
+3. Busbar chamber height: Use the updated busbar chamber height directly from the code.
+Example:
+   * ≤400A → 100 mm
+   * 401–800A → 150 mm
+   * 800A → 200 mm
+4. Since the panel uses 4 busbars, multiply busbar chamber height by 4.
+Example: If busbar height = 150 mm, Total busbar section height = 150 × 4 = 600 mm
+5. After busbar section, place outgoing MCCBs.
+6. Use the tallest outgoing MCCB height from Excel dimensions.
+7. Add extra bottom/end clearance: 300 mm
+8. Final GA panel height formula:
+PANEL HEIGHT = 1000
+   * (Busbar Height × 4)
+   * Tallest Outgoing MCCB Height + 300
+======================================== BUSBAR SECT
+<truncated 191 bytes>
+===================================== HMI BOX REQUIREMENTS
+
+1. Add HMI box on front door.
+2. Leave 250 mm clearance space on the left side of the HMI.
+3. HMI should be properly aligned aesthetically.
+======================================== DOOR & PANEL STRUCTURE REQUIREMENTS
+
+1. Draw center vertical line to represent panel door split.
+2. Door should visually look like an industrial electrical panel door.
+3. Include:
+   * Outer enclosure
+   * Mounting plate
+   * Busbar chamber
+   * MCCB arrangement
+   * HMI cutout
+   * Door split line
+======================================== DRAWING STYLE REQUIREMENTS
+
+1. Industrial GA drawing style.
+2. Clean professional SVG/AutoCAD style layout.
+3. Use dimension arrows and labels.
+4. Display:
+   * Overall Width
+   * Overall Height
+   * MCCB dimensions
+   * Busbar chamber
+   * HMI position
+5. Use proper scaling and alignment.
+6. Use IEC 61439 layout practices.
+======================================== INPUT SOURCES
+
+1. SLD code:
+   * Extract all MCCB ratings dynamically
+   * Identify incoming and outgoing MCCBs
+   * Identify total busbar current
+2. Circuit Breaker Dimensions Excel:
+   * Use Width, Height, Depth dynamically
+   * Match MCCB rating with Excel values
+======================================== OUTPUT REQUIRED
+Generate:
+
+1. Front Elevation GA
+2. Side Elevation
+3. Busbar chamber section
+4. Door split indication
+5. HMI placement
+6. Dimension annotations
+7. Final overall panel dimensions
+Use a professional industrial electrical panel GA drawing format., need the code for GA genertion as i have peovided u the prompt and details
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-28T16:33:08+05:30.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 3.5 Flash (Medium). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

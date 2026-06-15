@@ -79,6 +79,7 @@ class MicrogridBridge:
                 "average_monthly_op_units": analysis["average_monthly_op_units"],
                 "average_hourly_op_units": analysis["average_hourly_op_units"],
                 "months": analysis["months"],
+                "bill_data": analysis.get("bill_data", []),
             }
         except Exception as error:
             return {"ok": False, "error": str(error)}

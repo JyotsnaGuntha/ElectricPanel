@@ -20,6 +20,45 @@ const state = {
   uploadedBills: [],
 };
 
+const ROUND_TRIP_EFFICIENCY = 0.85;
+const DEPTH_OF_DISCHARGE = 0.90;
+
+function calculateBessCapacity(billData) {
+  if (!Array.isArray(billData) || billData.length === 0) return null;
+
+  let totalMp = 0;
+  let totalEp = 0;
+
+  for (const bill of billData) {
+    const mp = parseFloat(bill.mp);
+    const ep = parseFloat(bill.ep);
+
+    if (isNaN(mp) || isNaN(ep) || mp < 0 || ep < 0) {
+      return null;
+    }
+    totalMp += mp;
+    totalEp += ep;
+  }
+
+  const averageMonthlyConsumption = (totalMp + totalEp) / billData.length;
+  const dailyConsumption = averageMonthlyConsumption / 30;
+
+  const divisor = (ROUND_TRIP_EFFICIENCY * DEPTH_OF_DISCHARGE);
+  if (divisor === 0) return null;
+
+  const batterySizeKwh = dailyConsumption / divisor;
+  const energyPowerKw = dailyConsumption / 6;
+
+  return {
+    averageMonthlyConsumption: averageMonthlyConsumption,
+    dailyConsumption: dailyConsumption,
+    roundTripEfficiency: ROUND_TRIP_EFFICIENCY,
+    depthOfDischarge: DEPTH_OF_DISCHARGE,
+    batterySizeKwh: batterySizeKwh,
+    energyPowerKw: energyPowerKw
+  };
+}
+
 const FULLSCREEN_MIN_ZOOM = 1;
 const FULLSCREEN_MAX_ZOOM = 4;
 const FULLSCREEN_ZOOM_STEP = 0.12;
@@ -120,6 +159,83 @@ function getThemeIconSVG(theme) {
 function numberValue(id, fallback = 0) {
   const value = Number($(id).value);
   return Number.isFinite(value) ? value : fallback;
+}
+
+// ── Custom div-based select helpers ──────────────────────────────────────────
+function initCustomSelect(dropdownId, hiddenInputId, onChangeFn) {
+  const dropdown = $(dropdownId);
+  const hidden   = $(hiddenInputId);
+  const trigger  = dropdown.querySelector(".custom-select-trigger");
+  const options  = dropdown.querySelectorAll(".custom-select-option");
+
+  function close() {
+    dropdown.classList.remove("is-open");
+    dropdown.setAttribute("aria-expanded", "false");
+  }
+
+  function open() {
+    // Close all other custom selects first
+    document.querySelectorAll(".custom-select.is-open").forEach((el) => {
+      if (el !== dropdown) {
+        el.classList.remove("is-open");
+        el.setAttribute("aria-expanded", "false");
+      }
+    });
+    dropdown.classList.add("is-open");
+    dropdown.setAttribute("aria-expanded", "true");
+  }
+
+  function selectOption(value, label) {
+    hidden.value = value;
+    dropdown.dataset.value = value;
+    trigger.textContent = label;
+    trigger.classList.toggle("is-placeholder", value === "");
+    options.forEach((o) => o.classList.toggle("is-selected", o.dataset.value === value));
+    close();
+    if (onChangeFn) onChangeFn(value);
+  }
+
+  // Set initial placeholder style
+  trigger.classList.add("is-placeholder");
+
+  dropdown.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dropdown.classList.contains("is-open") ? close() : open();
+  });
+
+  options.forEach((opt) => {
+    opt.addEventListener("click", (e) => {
+      e.stopPropagation();
+      selectOption(opt.dataset.value, opt.textContent);
+    });
+  });
+
+  // Keyboard navigation
+  dropdown.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      dropdown.classList.contains("is-open") ? close() : open();
+    } else if (e.key === "Escape") {
+      close();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const vals = Array.from(options);
+      const cur  = vals.findIndex((o) => o.dataset.value === hidden.value);
+      const next = e.key === "ArrowDown"
+        ? Math.min(cur + 1, vals.length - 1)
+        : Math.max(cur - 1, 0);
+      selectOption(vals[next].dataset.value, vals[next].textContent);
+    }
+  });
+
+  // Expose a programmatic setter used by restoreFormState
+  return {
+    setValue(value) {
+      const opt = Array.from(options).find((o) => o.dataset.value === value);
+      if (opt) selectOption(opt.dataset.value, opt.textContent);
+      else selectOption("", "Select");
+    },
+  };
 }
 
 function parseOptionalNumber(rawValue) {
@@ -431,7 +547,7 @@ function renderDynamicFields() {
     const value = dgValues[index] ?? parseOptionalNumber(state.dg_ratings[index]);
     const wrapper = document.createElement("label");
     wrapper.className = "row";
-    wrapper.innerHTML = `
+    wrapper.innerHTML = `  
       <span>DG ${index + 1}</span>
       <input type="number" min="0" step="1" value="${formatInputValue(value)}" placeholder="Enter" data-dg-index="${index}" />
     `;
@@ -598,9 +714,16 @@ function renderMetrics(design) {
   const items = [
     ["Busbar Current", `${summary.total_busbar_current.toFixed(2)} A`],
     ["Busbar Spec", summary.busbar_spec],
-    ["Panel Size", `${design.ga.panel_w} × ${design.ga.panel_h} × ${design.ga.panel_d} mm`],
-    ["BESS Capacity", state.bessRecommendation ? `${state.bessRecommendation} kWh` : "--"],
+    ["Panel Size", `${design.ga.panel_w} &times; ${design.ga.panel_h} &times; ${design.ga.panel_d} mm`],
   ];
+
+  if (state.bessRecommendation) {
+    const bess = state.bessRecommendation;
+    const roundedKw = Math.round(bess.energyPowerKw);
+    const roundedKwh = Math.round(bess.batterySizeKwh);
+    const hours = Math.round(bess.batterySizeKwh / bess.energyPowerKw);
+    items.push(["BESS Capacity", `${roundedKw} kW / ${roundedKwh} kWh<br><span style="font-size: 0.85em; opacity: 0.8; font-weight: normal;">(Hours - ${hours})</span>`]);
+  }
 
   $("summaryGrid").innerHTML = items
     .map(([label, value]) => `
@@ -693,7 +816,52 @@ async function analyzeBillUploads() {
     }
 
     $("recommendedSolarLabel").textContent = `Suggested Solar Capacity: ${response.recommended_kw} kW`;
-    $("recommendedBessLabel").textContent = `Suggested BESS Capacity: ${response.recommended_bess_kwh} kWh`;
+
+    const billData = response.bill_data || [];
+    $("bessSizingSection").classList.remove("hidden");
+    
+    if (billData.length === 0) {
+      state.bessRecommendation = null;
+      $("bessInsufficientMessage").classList.remove("hidden");
+      $("bessCalculations").classList.add("hidden");
+    } else {
+      const bessResult = calculateBessCapacity(billData);
+
+      if (bessResult) {
+        state.bessRecommendation = bessResult;
+        $("bessInsufficientMessage").classList.add("hidden");
+        $("bessCalculations").classList.remove("hidden");
+
+        const tbody = $("bessBillsTbody");
+        let html = '';
+        billData.forEach((b, i) => {
+          html += `<tr><td>Bill ${i+1}</td><td>${(parseFloat(b.mp) + parseFloat(b.ep)).toFixed(2)}</td></tr>`;
+        });
+        html += `<tr><th>Average Monthly</th><th>${bessResult.averageMonthlyConsumption.toFixed(2)}</th></tr>`;
+        tbody.innerHTML = html;
+
+        $("bessDailyConsumption").textContent = `${bessResult.dailyConsumption.toFixed(2)} kWh/day`;
+        $("bessRte").textContent = `${(bessResult.roundTripEfficiency * 100).toFixed(0)}%`;
+        $("bessDod").textContent = `${(bessResult.depthOfDischarge * 100).toFixed(0)}%`;
+        
+        $("bessTopMetricBox").classList.remove("hidden");
+        const roundedKw = Math.round(bessResult.energyPowerKw);
+        const roundedKwh = Math.round(bessResult.batterySizeKwh);
+        const roundedHours = Math.round(bessResult.batterySizeKwh / bessResult.energyPowerKw);
+        $("bessCapacityLabel").textContent = `${roundedKw} kW / ${roundedKwh} kWh`;
+        $("bessHoursLabel").textContent = `(Hours - ${roundedHours})`;
+
+        // Immediately refresh the main summary row if a design is already shown
+        if (state.lastDesign) {
+          renderMetrics(state.lastDesign);
+        }
+      } else {
+        state.bessRecommendation = null;
+        $("bessInsufficientMessage").classList.remove("hidden");
+        $("bessCalculations").classList.add("hidden");
+      }
+    }
+
     $("uploadAnalysisResult").classList.remove("hidden");
     $("uploadAnalysisResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
     state.solarRecommendation = response.recommended_kw;
@@ -796,8 +964,11 @@ async function loadInitialState() {
   $("gridKw").value = formatInputValue(parseOptionalNumber(state.grid_kw));
   $("numDg").value = formatInputValue(parseOptionalNumber(state.num_dg));
   $("numOutputs").value = formatInputValue(parseOptionalNumber(state.num_outputs));
+  // Sync hidden inputs directly (programmatic setters also update UI if controllers are ready)
   $("busbarMaterial").value = state.busbar_material || "";
   $("numPoles").value = state.num_poles ? String(state.num_poles) : "";
+  if (state._busbarCtrl)  state._busbarCtrl.setValue(state.busbar_material || "");
+  if (state._numPolesCtrl) state._numPolesCtrl.setValue(state.num_poles ? String(state.num_poles) : "");
 
   document.body.dataset.theme = state.theme;
   $("themeToggle").innerHTML = getThemeIconSVG(state.theme);
@@ -963,10 +1134,33 @@ function bindEvents() {
     }
   });
 
-  ["solarKw", "gridKw", "numDg", "numOutputs", "busbarMaterial", "numPoles"].forEach((id) => {
+  // Native-input change listeners (custom selects use their own onChange callback)
+  ["solarKw", "gridKw", "numDg", "numOutputs"].forEach((id) => {
     $(id).addEventListener("change", () => {
       state.hasPendingChanges = true;
       renderDynamicFields();
+    });
+  });
+
+  // Custom div-based dropdowns
+  const busbarCtrl = initCustomSelect("busbarMaterialDropdown", "busbarMaterial", () => {
+    state.hasPendingChanges = true;
+    renderDynamicFields();
+  });
+  const numPolesCtrl = initCustomSelect("numPolesDropdown", "numPoles", () => {
+    state.hasPendingChanges = true;
+    renderDynamicFields();
+  });
+
+  // Store controllers on state so restoreFormState can call setValue
+  state._busbarCtrl  = busbarCtrl;
+  state._numPolesCtrl = numPolesCtrl;
+
+  // Close any open custom dropdown on outside click
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".custom-select.is-open").forEach((el) => {
+      el.classList.remove("is-open");
+      el.setAttribute("aria-expanded", "false");
     });
   });
 

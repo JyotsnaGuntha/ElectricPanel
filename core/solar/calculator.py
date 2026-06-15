@@ -119,37 +119,9 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         nh_units = row["nh"]
         op_units = row["op"]
 
-        solar_usable_units = mp_units + nh_units
-
-        total_solar_usable_units += solar_usable_units
-        total_mp_units += mp_units
-        total_nh_units += nh_units
-        total_op_units += op_units
-        total_units += row["total"]
-    
-    months = len(validated_rows)
-
-    # -----------------------------
-    # Solar Calculation
-    # -----------------------------
-    # Formula: Solar Capacity (kW) = Total Units / 30*4.2
-    
-    # 30 - days
-    # 4.2 - solar hrs per day
-    
-    average_monthly_units = total_solar_usable_units / months
-
-    recommended_kw = _round_practical_kw(
-        average_monthly_units / (30 * 4.2)
-    )
-
-    # -----------------------------
-    # BESS Calculation
-    # -----------------------------
-    average_monthly_op_units = total_op_units / months
-    daily_op_units = average_monthly_op_units / 30
-    average_hourly_op_units = daily_op_units / OFF_PEAK_HOURS
-    recommended_bess_kwh = math.ceil(average_hourly_op_units)
+    average_monthly_units = total_solar_usable_units / len(validated_rows)
+    recommended_kw = _round_practical_kw(average_monthly_units / 130.0)
+    bill_data = [{"mp": row["mp"], "ep": row["ep"], "total": row["total"], "month": row["month"]} for row in validated_rows]
 
     return {
         "months": months,
@@ -170,4 +142,5 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
 
         # Reference
         "total_units": round(total_units, 2),
+        "bill_data": bill_data,
     }

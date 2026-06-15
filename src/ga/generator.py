@@ -229,11 +229,6 @@ def generate_ga_svg(
     # ── Busbar chamber layout
     bb_top_px = TOP_Y + mm(y_busbar_start)
     bb_h_px = mm(total_busbar_h)
-    # Busbar chamber header text (placed slightly above the chamber to not overlap the busbars)
-    dwg.add(dwg.text(f"BUSBAR CHAMBER (4-POLE) — {BUSBAR_CH} mm",
-                     insert=(mp_x + mF_W / 2, bb_top_px - 8),
-                     font_size=max(12, mm(15)), fill=LBL_C, text_anchor="middle",
-                     font_family="Arial", font_weight="bold"))
 
     # Define colors for use in side elevation
     colors_bb = ["#ef4444", "#f59e0b", "#3b82f6", "#4b5563" if is_dark_theme else "#9ca3af"]
@@ -398,8 +393,7 @@ def generate_ga_svg(
     mp_x_side = SIDE_X + pF_D - mm_s(50)
     dwg.add(dwg.line((mp_x_side, TOP_Y + mm(50)), (mp_x_side, TOP_Y + pF_H - mm(50)),
                      stroke=HMI_STROKE, stroke_width=2.0, stroke_dasharray="4,2"))
-    dwg.add(dwg.text("MP", insert=(mp_x_side - 10, TOP_Y + mm(80)),
-                     font_size=max(11, mm(14)), fill=LBL_C, text_anchor="end", font_family="Arial", font_weight="bold"))
+
 
     # Busbars stacked vertically in Side View
     for idx_bb in range(4):

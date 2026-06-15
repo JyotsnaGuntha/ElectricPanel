@@ -52,5 +52,7 @@ try:
     print(f"  Suggested Solar Capacity: {analysis['recommended_kw']} kW")
     print(f"  Daily OP Consumption: {analysis['daily_op_units']:.2f} kWh/day")
     print(f"  Suggested BESS Capacity: {analysis['recommended_bess_kwh']:.2f} kWh")
+    print(f"  Suggested BESS Power: {analysis['recommended_bess_kw']:.2f} kW")
+    print(f"  Calculated Backup Duration: {analysis['backup_hours']} Hrs")
 except Exception as e:
     print("Bill Recommendation failed:", e)

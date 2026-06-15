@@ -71,8 +71,9 @@ class DesignService:
         return {
             "recommended_kw": analysis["recommended_kw"],
             "recommended_bess_kwh": analysis["recommended_bess_kwh"],
+            "recommended_bess_kw": analysis["recommended_bess_kw"],
+            "backup_hours": analysis["backup_hours"],
             "average_monthly_op_units": analysis["average_monthly_op_units"],
-            "average_hourly_op_units": analysis["average_hourly_op_units"],
             "months": analysis["months"],
             "bill_data": analysis.get("bill_data", []),
         }
@@ -276,6 +277,9 @@ class DesignService:
             design["inputs"]["num_poles"],
             self._active_db(),
             design["summary"]["warning_flag"],
+            bess_kwh=payload.get("bess_kwh"),
+            bess_kw=payload.get("bess_kw"),
+            bess_hours=payload.get("bess_hours"),
         )
 
     def build_ga_pdf(self, payload):

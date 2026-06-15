@@ -210,6 +210,9 @@ def generate_pdf_report(
     num_poles,
     mccb_db,
     warning_flag=False,
+    bess_kwh=None,
+    bess_kw=None,
+    bess_hours=None,
 ):
     """Generate the technical report PDF used by the desktop UI."""
 
@@ -240,9 +243,10 @@ def generate_pdf_report(
     story.append(Paragraph("1. System Overview", h2_style))
     grid_txt = f"<b>{grid_kw} kW</b> Grid supply, " if grid_kw > 0 else ""
     solar_txt = f"and <b>{solar_kw} kWp</b> Solar PV" if solar_kw > 0 else ""
+    bess_txt = f", and a <b>{round(bess_kwh)} kWh</b> Battery Energy Storage System (BESS)" if (bess_kwh is not None and bess_kwh > 0) else ""
     story.append(Paragraph(
         f"This report details the configuration and material requirements for a customized Microgrid Panel. "
-        f"The system handles <b>{int(num_dg)} DG(s)</b>, {grid_txt}{solar_txt}. "
+        f"The system handles <b>{int(num_dg)} DG(s)</b>, {grid_txt}{solar_txt}{bess_txt}. "
         f"Managed via a centralized Microgrid Controller (MGC).",
         normal_style,
     ))
@@ -256,6 +260,11 @@ def generate_pdf_report(
         f"<b>Panel Dimensions (Computed):</b> {panel_w}W × {panel_h}H × {panel_d}D mm<br/>"
         f"<b>System Configuration:</b> {int(num_poles)}-Phase, {int(num_outputs)} Outgoing Feeders<br/>"
     )
+    if bess_kwh is not None and bess_kwh > 0:
+        bess_kw_val = bess_kw if bess_kw is not None else (bess_kwh / (bess_hours or 8))
+        specs += (
+            f"<b>BESS Capacity:</b> {round(bess_kw_val)} kW / {round(bess_kwh)} kWh (Backup Duration: {round(bess_hours or 8)} Hrs)<br/>"
+        )
     if warning_flag:
         specs += "<br/><font color='red'><b>WARNING:</b> Total busbar current exceeds total outgoing rating. Review configuration.</font>"
     story.append(Paragraph(specs, normal_style))

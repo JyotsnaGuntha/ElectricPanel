@@ -40,6 +40,9 @@ class MicrogridBridge:
             "outgoing_ratings": [],
             "busbar_material": "",
             "num_poles": None,
+            "bess_kwh": None,
+            "bess_kw": None,
+            "bess_hours": None,
         }
 
     def _active_db(self):
@@ -78,8 +81,9 @@ class MicrogridBridge:
                 "ok": True,
                 "recommended_kw": analysis["recommended_kw"],
                 "recommended_bess_kwh": analysis["recommended_bess_kwh"],
+                "recommended_bess_kw": analysis["recommended_bess_kw"],
+                "backup_hours": analysis["backup_hours"],
                 "average_monthly_op_units": analysis["average_monthly_op_units"],
-                "average_hourly_op_units": analysis["average_hourly_op_units"],
                 "months": analysis["months"],
                 "bill_data": analysis.get("bill_data", []),
             }

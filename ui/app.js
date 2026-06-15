@@ -30,34 +30,61 @@ function calculateBessCapacity(billData) {
 
   let totalMp = 0;
   let totalEp = 0;
+  let totalOp = 0;
 
   for (const bill of billData) {
     const mp = parseFloat(bill.mp);
     const ep = parseFloat(bill.ep);
+    const op = parseFloat(bill.op || 0);
 
-    if (isNaN(mp) || isNaN(ep) || mp < 0 || ep < 0) {
+    if (isNaN(mp) || isNaN(ep) || isNaN(op) || mp < 0 || ep < 0 || op < 0) {
       return null;
     }
     totalMp += mp;
     totalEp += ep;
+    totalOp += op;
   }
 
-  const averageMonthlyConsumption = (totalMp + totalEp) / billData.length;
-  const dailyConsumption = averageMonthlyConsumption / 30;
+  const avgMp = totalMp / billData.length;
+  const avgEp = totalEp / billData.length;
+  const avgOp = totalOp / billData.length;
+
+  const dailyMp = avgMp / 30;
+  const dailyEp = avgEp / 30;
+  const dailyOp = avgOp / 30;
+
+  const dailyMpEp = dailyMp + dailyEp;
+
+  let backup_hours = 6;
+  let dailyConsumption = 0;
+
+  if (dailyMpEp >= dailyOp) {
+    backup_hours = 6;
+    dailyConsumption = dailyMpEp;
+  } else {
+    backup_hours = 8;
+    dailyConsumption = dailyOp;
+  }
+
+  if (dailyConsumption <= 0) {
+    backup_hours = 6;
+    dailyConsumption = 0;
+  }
 
   const divisor = (ROUND_TRIP_EFFICIENCY * DEPTH_OF_DISCHARGE);
   if (divisor === 0) return null;
 
   const batterySizeKwh = dailyConsumption / divisor;
-  const energyPowerKw = dailyConsumption / 6;
+  const energyPowerKw = batterySizeKwh / backup_hours;
 
   return {
-    averageMonthlyConsumption: averageMonthlyConsumption,
+    averageMonthlyConsumption: (backup_hours === 6 ? (avgMp + avgEp) : avgOp),
     dailyConsumption: dailyConsumption,
     roundTripEfficiency: ROUND_TRIP_EFFICIENCY,
     depthOfDischarge: DEPTH_OF_DISCHARGE,
     batterySizeKwh: batterySizeKwh,
-    energyPowerKw: energyPowerKw
+    energyPowerKw: energyPowerKw,
+    backup_hours: backup_hours
   };
 }
 
@@ -402,9 +429,44 @@ function renderBillFileList() {
     .join("");
 }
 
+function populateUploadModalResult() {
+  if (state.solarRecommendation !== null) {
+    $("recommendedSolarLabel").textContent = `${state.solarRecommendation} kW`;
+  } else {
+    $("recommendedSolarLabel").textContent = "-- kW";
+  }
+
+  if (state.bessRecommendation) {
+    const bess = state.bessRecommendation;
+    $("bessSizingSection").classList.remove("hidden");
+    $("bessInsufficientMessage").classList.add("hidden");
+    $("bessCalculations").classList.remove("hidden");
+
+    $("bessDailyConsumption").textContent = bess.dailyConsumption ? `${bess.dailyConsumption.toFixed(2)} kWh/day` : "-- kWh/day";
+    $("bessRte").textContent = `${(bess.roundTripEfficiency * 100).toFixed(0)}%`;
+    $("bessDod").textContent = `${(bess.depthOfDischarge * 100).toFixed(0)}%`;
+    $("bessPeakHrs").textContent = `${bess.backup_hours} Hrs`;
+
+    $("bessTopMetricBox").classList.remove("hidden");
+    const roundedKw = Math.round(bess.energyPowerKw);
+    const roundedKwh = Math.round(bess.batterySizeKwh);
+    const roundedHours = bess.backup_hours;
+    $("bessCapacityLabel").textContent = `${roundedKw} kW / ${roundedKwh} kWh`;
+    $("bessHoursLabel").textContent = `(Hours - ${roundedHours})`;
+  } else {
+    $("bessTopMetricBox").classList.add("hidden");
+    $("bessSizingSection").classList.add("hidden");
+  }
+}
+
 function openUploadModal() {
   $("uploadModal").classList.remove("hidden");
-  $("uploadAnalysisResult").classList.add("hidden");
+  if (!state.solarRecommendation && !state.bessRecommendation) {
+    $("uploadAnalysisResult").classList.add("hidden");
+  } else {
+    $("uploadAnalysisResult").classList.remove("hidden");
+    populateUploadModalResult();
+  }
   $("billFilesInput").value = "";
   $("analyzeBillsButton").disabled = false;
   renderBillFileList();
@@ -617,7 +679,7 @@ function collectInputs() {
     throw new Error("Please enter all outgoing feeder ratings.");
   }
 
-  return {
+  const payload = {
     theme: state.theme,
     solar_kw: solarKwNum,
     grid_kw: gridKwNum,
@@ -628,6 +690,14 @@ function collectInputs() {
     busbar_material: busbarMaterial,
     num_poles: Number(numPolesRaw),
   };
+
+  if (state.bessRecommendation) {
+    payload.bess_kwh = state.bessRecommendation.batterySizeKwh;
+    payload.bess_kw = state.bessRecommendation.energyPowerKw;
+    payload.bess_hours = state.bessRecommendation.backup_hours;
+  }
+
+  return payload;
 }
 
 function setLoading(isLoading) {
@@ -723,7 +793,7 @@ function renderMetrics(design) {
     const bess = state.bessRecommendation;
     const roundedKw = Math.round(bess.energyPowerKw);
     const roundedKwh = Math.round(bess.batterySizeKwh);
-    const hours = Math.round(bess.batterySizeKwh / bess.energyPowerKw);
+    const hours = bess.backup_hours || Math.round(bess.batterySizeKwh / bess.energyPowerKw);
     items.push(["BESS Capacity", `${roundedKw} kW / ${roundedKwh} kWh<br><span style="font-size: 0.85em; opacity: 0.8; font-weight: normal;">(Hours - ${hours})</span>`]);
   }
 
@@ -831,25 +901,18 @@ async function analyzeBillUploads() {
 
       if (bessResult) {
         state.bessRecommendation = bessResult;
-        $("bessInsufficientMessage").classList.add("hidden");
-        $("bessCalculations").classList.remove("hidden");
-
-        const tbody = $("bessBillsTbody");
-        let html = '';
-        billData.forEach((b, i) => {
-          html += `<tr><td>Bill ${i + 1}</td><td>${(parseFloat(b.mp) + parseFloat(b.ep)).toFixed(2)}</td></tr>`;
-        });
-        html += `<tr><th>Average Monthly</th><th>${bessResult.averageMonthlyConsumption.toFixed(2)}</th></tr>`;
-        tbody.innerHTML = html;
+        $("bessInsufficientMessage").add ? $("bessInsufficientMessage").add("hidden") : $("bessInsufficientMessage").classList.add("hidden");
+        $("bessCalculations").remove ? $("bessCalculations").remove("hidden") : $("bessCalculations").classList.remove("hidden");
 
         $("bessDailyConsumption").textContent = `${bessResult.dailyConsumption.toFixed(2)} kWh/day`;
         $("bessRte").textContent = `${(bessResult.roundTripEfficiency * 100).toFixed(0)}%`;
         $("bessDod").textContent = `${(bessResult.depthOfDischarge * 100).toFixed(0)}%`;
+        $("bessPeakHrs").textContent = `${bessResult.backup_hours} Hrs`;
 
         $("bessTopMetricBox").classList.remove("hidden");
         const roundedKw = Math.round(bessResult.energyPowerKw);
         const roundedKwh = Math.round(bessResult.batterySizeKwh);
-        const roundedHours = Math.round(bessResult.batterySizeKwh / bessResult.energyPowerKw);
+        const roundedHours = bessResult.backup_hours;
         $("bessCapacityLabel").textContent = `${roundedKw} kW / ${roundedKwh} kWh`;
         $("bessHoursLabel").textContent = `(Hours - ${roundedHours})`;
 
@@ -864,15 +927,14 @@ async function analyzeBillUploads() {
       }
     }
 
-
-
     $("uploadAnalysisResult").classList.remove("hidden");
     $("uploadAnalysisResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
     state.solarRecommendation = response.recommended_kw;
     if (!state.bessRecommendation && response.recommended_bess_kwh) {
       state.bessRecommendation = {
         batterySizeKwh: response.recommended_bess_kwh,
-        energyPowerKw: response.recommended_bess_kwh / 4,
+        energyPowerKw: response.recommended_bess_kw || (response.recommended_bess_kwh / (response.backup_hours || 8)),
+        backup_hours: response.backup_hours || 8,
         averageMonthlyConsumption: 0,
         dailyConsumption: 0,
         roundTripEfficiency: 0.85,
@@ -972,6 +1034,20 @@ async function loadInitialState() {
   state.solarRecommendation = state.solar_kw;
   state.solarInputMode = state.solar_kw ? "recommended" : "upload";
   state.uploadedBills = [];
+
+  if (initial.bess_kwh) {
+    state.bessRecommendation = {
+      batterySizeKwh: initial.bess_kwh,
+      energyPowerKw: initial.bess_kw,
+      backup_hours: initial.bess_hours,
+      averageMonthlyConsumption: 0,
+      dailyConsumption: 0,
+      roundTripEfficiency: 0.85,
+      depthOfDischarge: 0.90
+    };
+  } else {
+    state.bessRecommendation = null;
+  }
 
   $("solarKw").value = formatInputValue(parseOptionalNumber(state.solar_kw));
   $("gridKw").value = formatInputValue(parseOptionalNumber(state.grid_kw));

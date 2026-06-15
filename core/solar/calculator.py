@@ -111,6 +111,7 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
     total_solar_usable_units = 0.0
     total_mp_units = 0.0
     total_nh_units = 0.0
+    total_ep_units = 0.0
     total_op_units = 0.0
     total_units = 0.0
 
@@ -118,6 +119,7 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
     for row in validated_rows:
         total_mp_units += row["mp"]
         total_nh_units += row["nh"]
+        total_ep_units += row["ep"]
         total_op_units += row["op"]
         total_units += row["total"]
         total_solar_usable_units += (row["mp"] + row["nh"])
@@ -125,13 +127,46 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
     average_monthly_units = total_solar_usable_units / months
     recommended_kw = _round_practical_kw(average_monthly_units / 126.0)
     # 126 = 30*4.2
-    bill_data = [{"mp": row["mp"], "ep": row["ep"], "total": row["total"], "month": row["month"]} for row in validated_rows]
+    bill_data = [
+        {
+            "month": row["month"],
+            "mp": row["mp"],
+            "nh": row["nh"],
+            "ep": row["ep"],
+            "op": row["op"],
+            "total": row["total"],
+        }
+        for row in validated_rows
+    ]
 
     # BESS calculations
-    average_monthly_op_units = total_op_units / months
-    daily_op_units = average_monthly_op_units / 30.0
-    average_hourly_op_units = daily_op_units / float(OFF_PEAK_HOURS)
-    recommended_bess_kwh = average_hourly_op_units
+    avg_mp = total_mp_units / months
+    avg_ep = total_ep_units / months
+    avg_op = total_op_units / months
+
+    daily_mp = avg_mp / 30.0
+    daily_ep = avg_ep / 30.0
+    daily_op = avg_op / 30.0
+
+    daily_mp_ep = daily_mp + daily_ep
+
+    if daily_mp_ep >= daily_op:
+        backup_hours = 6
+        daily_consumption = daily_mp_ep
+    else:
+        backup_hours = 8
+        daily_consumption = daily_op
+
+    if daily_consumption <= 0:
+        backup_hours = 6
+        daily_consumption = 0.0
+
+    rte = 0.85
+    dod = 0.90
+    divisor = rte * dod
+
+    recommended_bess_kwh = daily_consumption / divisor if divisor > 0 else 0.0
+    recommended_bess_kw = recommended_bess_kwh / backup_hours if backup_hours > 0 else 0.0
 
     return {
         "months": months,
@@ -145,10 +180,12 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
 
         # BESS Metrics
         "op_units": round(total_op_units, 2),
-        "average_monthly_op_units": round(average_monthly_op_units, 2),
-        "daily_op_units": round(daily_op_units, 2),
-        "average_hourly_op_units": round(average_hourly_op_units, 2),
+        "ep_units": round(total_ep_units, 2),
+        "average_monthly_op_units": round(avg_op, 2),
+        "daily_op_units": round(daily_consumption, 2),
         "recommended_bess_kwh": recommended_bess_kwh,
+        "recommended_bess_kw": recommended_bess_kw,
+        "backup_hours": backup_hours,
 
         # Reference
         "total_units": round(total_units, 2),

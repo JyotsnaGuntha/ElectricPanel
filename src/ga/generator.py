@@ -143,6 +143,7 @@ def generate_ga_svg(
     SUB_C = C["sub"]
     GRID_C = C["grid"]
     is_dark_theme = theme == "dark"
+    LBL_C = "#ffffff" if is_dark_theme else "#8b0000"
     BASE_PLINTH = "#08121f" if is_dark_theme else "#e5e7eb"
     PANEL_GUIDE = "#2563eb" if is_dark_theme else "#94a3b8"
     DOOR_STROKE = "#f59e0b" if is_dark_theme else "#334155"
@@ -168,7 +169,7 @@ def generate_ga_svg(
             dwg.add(dwg.line((tx, y - 5), (tx, y + 5), stroke=DIM_C, stroke_width=1.3))
             dwg.add(dwg.polygon([(tx, y), (tx + flip * 10, y - 4), (tx + flip * 10, y + 4)], fill=DIM_C))
         dwg.add(dwg.text(label, insert=((x1 + x2) / 2, lbl_y),
-                         font_size=max(12, mm(15)), fill="#8b0000", text_anchor="middle",
+                         font_size=max(12, mm(15)), fill=LBL_C, text_anchor="middle",
                          font_family="Arial", font_weight="bold"))
 
     def arr_v(x, y1, y2, label, right=True):
@@ -182,7 +183,7 @@ def generate_ga_svg(
             dwg.add(dwg.polygon([(x, ty), (x - 4, ty + flip * 10), (x + 4, ty + flip * 10)], fill=DIM_C))
         g = dwg.g(transform=f"rotate(-90,{lbl_x},{mid_y})")
         g.add(dwg.text(label, insert=(lbl_x, mid_y + 4),
-                       font_size=max(12, mm(15)), fill="#8b0000", text_anchor="middle",
+                       font_size=max(12, mm(15)), fill=LBL_C, text_anchor="middle",
                        font_family="Arial", font_weight="bold"))
         dwg.add(g)
 
@@ -228,13 +229,10 @@ def generate_ga_svg(
     # ── Busbar chamber layout
     bb_top_px = TOP_Y + mm(y_busbar_start)
     bb_h_px = mm(total_busbar_h)
-    dwg.add(dwg.rect(insert=(mp_x + 5, bb_top_px), size=(mF_W - 10, bb_h_px),
-                     fill="#1c1917" if is_dark_theme else "#f4f4f5",
-                     stroke=BB_ST, stroke_width=1.2, stroke_dasharray="4,2"))
     # Busbar chamber header text (placed slightly above the chamber to not overlap the busbars)
     dwg.add(dwg.text(f"BUSBAR CHAMBER (4-POLE) — {BUSBAR_CH} mm",
                      insert=(mp_x + mF_W / 2, bb_top_px - 8),
-                     font_size=max(12, mm(15)), fill="#8b0000", text_anchor="middle",
+                     font_size=max(12, mm(15)), fill=LBL_C, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
 
     # Define colors for use in side elevation
@@ -249,7 +247,7 @@ def generate_ga_svg(
     dwg.add(dwg.rect(insert=(mp_x + 5, duct_y_px), size=(mF_W - 10, duct_h_px),
                      fill="none", stroke=ZONE_ST, stroke_width=0.7, stroke_dasharray="5,3"))
     dwg.add(dwg.text("Cable Gland Plate / Entry Zone", insert=(mp_x + mF_W / 2, duct_y_px + duct_h_px / 2 + 4),
-                     font_size=max(11, mm(14)), fill="#8b0000", text_anchor="middle",
+                     font_size=max(11, mm(14)), fill=LBL_C, text_anchor="middle",
                      font_family="Arial", font_style="italic", font_weight="bold"))
 
     # TECHNICAL CAD-STYLE DOUBLE-DOOR CABINET FRONT ELEVATION
@@ -371,17 +369,17 @@ def generate_ga_svg(
     hmi_sub_fs = max(11, mm(14))
     dwg.add(dwg.text("HMI / TOUCH SCREEN",
                      insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 - hmi_fs / 4),
-                     font_size=hmi_fs, fill="#8b0000", text_anchor="middle",
+                     font_size=hmi_fs, fill=LBL_C, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
     dwg.add(dwg.text("Control Display",
                      insert=(hmi_x_px + hmi_w_px / 2, hmi_y_px + hmi_h_px / 2 + hmi_fs),
-                     font_size=hmi_sub_fs, fill="#8b0000", text_anchor="middle",
+                     font_size=hmi_sub_fs, fill=LBL_C, text_anchor="middle",
                      font_family="Arial", font_style="italic", font_weight="bold"))
 
     # Labels for Front view
     dwg.add(dwg.text("FRONT ELEVATION GA",
                      insert=(FRONT_X + pF_W / 2, TOP_Y + pF_H + pF_PL + 26),
-                     font_size=max(14, mm(17)), fill="#8b0000", text_anchor="middle",
+                     font_size=max(14, mm(17)), fill=LBL_C, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
 
     # 7. SIDE ELEVATION
@@ -401,7 +399,7 @@ def generate_ga_svg(
     dwg.add(dwg.line((mp_x_side, TOP_Y + mm(50)), (mp_x_side, TOP_Y + pF_H - mm(50)),
                      stroke=HMI_STROKE, stroke_width=2.0, stroke_dasharray="4,2"))
     dwg.add(dwg.text("MP", insert=(mp_x_side - 10, TOP_Y + mm(80)),
-                     font_size=max(11, mm(14)), fill="#8b0000", text_anchor="end", font_family="Arial", font_weight="bold"))
+                     font_size=max(11, mm(14)), fill=LBL_C, text_anchor="end", font_family="Arial", font_weight="bold"))
 
     # Busbars stacked vertically in Side View
     for idx_bb in range(4):
@@ -418,13 +416,13 @@ def generate_ga_svg(
     dwg.add(dwg.rect(insert=(SIDE_X, hmi_side_y), size=(hmi_side_d, hmi_side_h),
                      fill=HMI_BG, stroke=HMI_STROKE, stroke_width=1.2))
     dwg.add(dwg.text("HMI", insert=(SIDE_X + hmi_side_d + 6, hmi_side_y + hmi_side_h / 2 + 4),
-                     font_size=max(12, mm(15)), fill="#8b0000", font_family="Arial", font_weight="bold"))
+                     font_size=max(12, mm(15)), fill=LBL_C, font_family="Arial", font_weight="bold"))
 
 
     # Side label
     dwg.add(dwg.text("SIDE ELEVATION",
                      insert=(SIDE_X + pF_D / 2, TOP_Y + pF_H + pF_PL + 26),
-                     font_size=max(14, mm(17)), fill="#8b0000", text_anchor="middle",
+                     font_size=max(14, mm(17)), fill=LBL_C, text_anchor="middle",
                      font_family="Arial", font_weight="bold"))
 
     # 8. Dimension arrows and annotations

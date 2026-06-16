@@ -76,6 +76,9 @@ class DesignService:
             "average_monthly_op_units": analysis["average_monthly_op_units"],
             "months": analysis["months"],
             "bill_data": analysis.get("bill_data", []),
+            "solar_total_consumption": analysis["solar_total_consumption"],
+            "solar_avg_monthly_consumption": analysis["solar_avg_monthly_consumption"],
+            "solar_avg_daily_consumption": analysis["solar_avg_daily_consumption"],
         }
 
     def compute_design(self, payload):

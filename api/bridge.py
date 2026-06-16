@@ -86,6 +86,9 @@ class MicrogridBridge:
                 "average_monthly_op_units": analysis["average_monthly_op_units"],
                 "months": analysis["months"],
                 "bill_data": analysis.get("bill_data", []),
+                "solar_total_consumption": analysis.get("solar_total_consumption", 0.0),
+                "solar_avg_monthly_consumption": analysis.get("solar_avg_monthly_consumption", 0.0),
+                "solar_avg_daily_consumption": analysis.get("solar_avg_daily_consumption", 0.0),
             }
         except Exception as error:
             return {"ok": False, "error": str(error)}

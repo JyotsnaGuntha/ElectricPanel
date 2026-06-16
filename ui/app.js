@@ -15,6 +15,10 @@ const state = {
   lastDesign: null,
   hasPendingChanges: false,
   solarRecommendation: null,
+  solarTotalConsumption: null,
+  solarMonthsCount: null,
+  solarAvgMonthlyConsumption: null,
+  solarAvgDailyConsumption: null,
   bessRecommendation: null,
   solarInputMode: "upload",
   uploadedBills: [],
@@ -432,8 +436,15 @@ function renderBillFileList() {
 function populateUploadModalResult() {
   if (state.solarRecommendation !== null) {
     $("recommendedSolarLabel").textContent = `${state.solarRecommendation} kW`;
+    $("solarSizingSection").classList.remove("hidden");
+    $("solarTotalConsumption").textContent = state.solarTotalConsumption !== null ? `${state.solarTotalConsumption.toFixed(2)} kWh` : "-- kWh";
+    $("solarMonthsCount").textContent = state.solarMonthsCount !== null ? `${state.solarMonthsCount}` : "--";
+    $("solarAvgMonthlyConsumption").textContent = state.solarAvgMonthlyConsumption !== null ? `${state.solarAvgMonthlyConsumption.toFixed(2)} kWh/month` : "-- kWh/month";
+    $("solarAvgDailyConsumption").textContent = state.solarAvgDailyConsumption !== null ? `${state.solarAvgDailyConsumption.toFixed(2)} kWh/day` : "-- kWh/day";
+    $("solarEstimatedCapacity").textContent = `${state.solarRecommendation} kW`;
   } else {
     $("recommendedSolarLabel").textContent = "-- kW";
+    $("solarSizingSection").classList.add("hidden");
   }
 
   if (state.bessRecommendation) {
@@ -889,6 +900,14 @@ async function analyzeBillUploads() {
 
     $("recommendedSolarLabel").textContent = `${response.recommended_kw} kW`;
 
+    // Populate Solar Sizing section
+    $("solarSizingSection").classList.remove("hidden");
+    $("solarTotalConsumption").textContent = `${response.solar_total_consumption.toFixed(2)} kWh`;
+    $("solarMonthsCount").textContent = `${response.months}`;
+    $("solarAvgMonthlyConsumption").textContent = `${response.solar_avg_monthly_consumption.toFixed(2)} kWh/month`;
+    $("solarAvgDailyConsumption").textContent = `${response.solar_avg_daily_consumption.toFixed(2)} kWh/day`;
+    $("solarEstimatedCapacity").textContent = `${response.recommended_kw} kW`;
+
     const billData = response.bill_data || [];
     $("bessSizingSection").classList.remove("hidden");
 
@@ -930,6 +949,10 @@ async function analyzeBillUploads() {
     $("uploadAnalysisResult").classList.remove("hidden");
     $("uploadAnalysisResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
     state.solarRecommendation = response.recommended_kw;
+    state.solarTotalConsumption = response.solar_total_consumption;
+    state.solarMonthsCount = response.months;
+    state.solarAvgMonthlyConsumption = response.solar_avg_monthly_consumption;
+    state.solarAvgDailyConsumption = response.solar_avg_daily_consumption;
     if (!state.bessRecommendation && response.recommended_bess_kwh) {
       state.bessRecommendation = {
         batterySizeKwh: response.recommended_bess_kwh,

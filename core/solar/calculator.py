@@ -108,25 +108,29 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         raise ValueError("No UNIT CONSUMED data was found in the uploaded PDFs.")
 
     months = len(validated_rows)
-    total_solar_usable_units = 0.0
     total_mp_units = 0.0
     total_nh_units = 0.0
     total_ep_units = 0.0
     total_op_units = 0.0
     total_units = 0.0
+    total_solar_consumption = 0.0
 
-    # Calculate solar-usable units (MP + NH only, as these are solar generation hours)
     for row in validated_rows:
         total_mp_units += row["mp"]
         total_nh_units += row["nh"]
         total_ep_units += row["ep"]
         total_op_units += row["op"]
         total_units += row["total"]
-        total_solar_usable_units += (row["mp"] + row["nh"])
+        # Total Consumption = MP + EP
+        total_solar_consumption += (row["mp"] + row["ep"])
 
-    average_monthly_units = total_solar_usable_units / months
-    recommended_kw = _round_practical_kw(average_monthly_units / 126.0)
-    # 126 = 30*4.2
+    # Average Monthly Consumption = (MP + EP) / Total Number of Months
+    average_monthly_consumption = total_solar_consumption / months
+    # Average Daily Consumption = Average Monthly Consumption / 30
+    average_daily_consumption = average_monthly_consumption / 30.0
+    # Estimated Solar Capacity
+    recommended_kw = _round_practical_kw(average_daily_consumption / 4.2)
+
     bill_data = [
         {
             "month": row["month"],
@@ -161,8 +165,8 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         backup_hours = 6
         daily_consumption = 0.0
 
-    rte = 0.85
-    dod = 0.90
+    rte = 0.85 #round trip efficiency
+    dod = 0.90 #Depth of Discharge
     divisor = rte * dod
 
     recommended_bess_kwh = daily_consumption / divisor if divisor > 0 else 0.0
@@ -172,10 +176,9 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         "months": months,
 
         # Solar Metrics
-        "mp_units": round(total_mp_units, 2),
-        "nh_units": round(total_nh_units, 2),
-        "solar_usable_units": round(total_solar_usable_units, 2),
-        "average_monthly_units": round(average_monthly_units, 2),
+        "solar_total_consumption": round(total_solar_consumption, 2),
+        "solar_avg_monthly_consumption": round(average_monthly_consumption, 2),
+        "solar_avg_daily_consumption": round(average_daily_consumption, 2),
         "recommended_kw": recommended_kw,
 
         # BESS Metrics

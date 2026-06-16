@@ -395,14 +395,40 @@ def parse_uploaded_bill_files(files):
         print("\n========== LLAMAPARSE OUTPUT ==========\n")
         print(text)
         print("\n=======================================\n")
-        bill_json = extract_bill_json(text)
-
-        file_rows = [bill_json]
-
+        
+        # Try local parsing first to avoid API calls
+        file_rows = _extract_llamaparse_table(text)
         if not file_rows:
-            file_rows = _extract_month_rows_from_text(
-                text
-            )
+            file_rows = _extract_month_rows_from_text(text)
+        if not file_rows:
+            file_rows = _extract_monthly_usage_rows(pdf_bytes)
+            
+        local_succeeded = False
+        if file_rows:
+            for r in file_rows:
+                if r.get("nh", 0) + r.get("ep", 0) + r.get("op", 0) + r.get("mp", 0) > 0:
+                    local_succeeded = True
+                    break
+
+        if not local_succeeded:
+            try:
+                bill_json = extract_bill_json(text)
+                if bill_json and isinstance(bill_json, dict):
+                    if not bill_json.get("month"):
+                        bill_json["month"] = _extract_bill_month(text) or f"Entry {fallback_index}"
+                    file_rows = [bill_json]
+            except Exception as e:
+                print(f"Gemini API error (could be rate limit/quota): {e}")
+                if not file_rows:
+                    file_rows = [{
+                        "month": _extract_bill_month(text) or f"Entry {fallback_index}",
+                        "nh": 0.0,
+                        "ep": 0.0,
+                        "op": 0.0,
+                        "mp": 0.0,
+                        "total": 0.0
+                    }]
+
         for row in file_rows:
             if not _clean_text(row.get("month")):
                 row["month"] = f"Entry {fallback_index}"
@@ -429,65 +455,142 @@ def extract_bill_using_llamaparse(pdf_bytes):
     return "\n".join(
         doc.text for doc in documents
     )
-    
+
+def _extract_llamaparse_table_hardcoded(text: str, month: str):
+    values = {}
+    slot_map = {
+        "A": "OP", "B": "MP", "C": "NH", "D": "EP",
+        "NH": "NH", "EP": "EP", "OP": "OP", "MP": "MP",
+        "TOTAL": "TOTAL"
+    }
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cols = [c.strip() for c in line.split("|")]
+        if len(cols) < 6:
+            continue
+        slot = cols[1].upper()
+        mapped_slot = slot_map.get(slot)
+        if not mapped_slot:
+            continue
+        try:
+            unit_consumed = float(cols[5].replace(",", ""))
+            values[mapped_slot] = unit_consumed
+        except:
+            continue
+            
+    if {"NH", "EP", "OP", "MP"}.issubset(values):
+        row_total = values["NH"] + values["EP"] + values["OP"] + values["MP"]
+        if row_total > 0:
+            return [{
+                "month": month,
+                "nh": values["NH"],
+                "ep": values["EP"],
+                "op": values["OP"],
+                "mp": values["MP"],
+                "total": values.get("TOTAL", row_total)
+            }]
+    return []
+
 def _extract_llamaparse_table(text: str):
-
     month = ""
-
     month_match = re.search(
-        r"MONTH\s*/\s*YEAR\s*:\s*(\d{2}/\d{4})",
+        r"MONTH\s*/\s*YEAR\s*:\s*(\d{1,2}/\d{2,4})",
         text,
         re.IGNORECASE
     )
-
+    if not month_match:
+        month_match = re.search(
+            r"BILL(?:ING)?\s+MONTH\s*:\s*([A-Za-z]{3,9}\s*\d{2,4})",
+            text,
+            re.IGNORECASE
+        )
     if month_match:
-        month = month_match.group(1)
+        month = month_match.group(1).strip()
+    else:
+        month = _extract_month_label(text)
 
-    values = {}
-
-    for line in text.splitlines():
-
+    # Parse markdown tables
+    lines = text.splitlines()
+    table_headers = None
+    table_rows = []
+    
+    for line in lines:
         if not line.startswith("|"):
             continue
-
-        cols = [c.strip() for c in line.split("|")]
-
-        if len(cols) < 6:
+        cols = [c.strip() for c in line.split("|")[1:-1]]
+        if not cols:
             continue
-
-        slot = cols[1].upper()
-
-        if slot not in ["NH", "EP", "OP", "MP", "TOTAL"]:
+        
+        # Check if separator row
+        if all(re.match(r"^[-:\s]+$", c) for c in cols):
             continue
-
+            
+        # Check for header
+        cols_upper = [c.upper() for c in cols]
+        if any("SLOT" in c or "ZONE" in c or "TOD" in c for c in cols_upper) and any("CONSUM" in c or "UNIT" in c or "DIFF" in c for c in cols_upper):
+            table_headers = cols_upper
+            table_rows = []
+            continue
+            
+        if table_headers:
+            table_rows.append(cols)
+            
+    if not table_headers or not table_rows:
+        return _extract_llamaparse_table_hardcoded(text, month)
+        
+    slot_idx = -1
+    consum_idx = -1
+    for i, h in enumerate(table_headers):
+        if "SLOT" in h or "ZONE" in h or "TOD" in h:
+            slot_idx = i
+        if "CONSUM" in h or "UNIT" in h or "DIFF" in h:
+            consum_idx = i
+            
+    if slot_idx == -1 or consum_idx == -1:
+        return _extract_llamaparse_table_hardcoded(text, month)
+        
+    values = {}
+    slot_map = {
+        "A": "OP", "B": "MP", "C": "NH", "D": "EP",
+        "NH": "NH", "EP": "EP", "OP": "OP", "MP": "MP",
+        "TOTAL": "TOTAL"
+    }
+    
+    for row in table_rows:
+        if len(row) <= max(slot_idx, consum_idx):
+            continue
+        slot = row[slot_idx].strip().upper()
+        mapped_slot = slot_map.get(slot)
+        if not mapped_slot:
+            for k, v in slot_map.items():
+                if k in slot:
+                    mapped_slot = v
+                    break
+        if not mapped_slot:
+            continue
+            
         try:
-            unit_consumed = float(
-                cols[5].replace(",", "")
-            )
+            val_str = row[consum_idx].replace(",", "").strip()
+            num_match = re.search(r"\d+(?:\.\d+)?", val_str)
+            if num_match:
+                values[mapped_slot] = float(num_match.group(0))
         except:
             continue
-
-        values[slot] = unit_consumed
-
+            
     if {"NH", "EP", "OP", "MP"}.issubset(values):
-
-        return [{
-            "month": month,
-            "nh": values["NH"],
-            "ep": values["EP"],
-            "op": values["OP"],
-            "mp": values["MP"],
-            "total": values.get(
-                "TOTAL",
-                values["NH"]
-                + values["EP"]
-                + values["OP"]
-                + values["MP"]
-            )
-        }]
-
-    return []
-
+        row_total = values["NH"] + values["EP"] + values["OP"] + values["MP"]
+        if row_total > 0:
+            return [{
+                "month": month,
+                "nh": values["NH"],
+                "ep": values["EP"],
+                "op": values["OP"],
+                "mp": values["MP"],
+                "total": values.get("TOTAL", row_total)
+            }]
+            
+    return _extract_llamaparse_table_hardcoded(text, month)
 
 import json
 

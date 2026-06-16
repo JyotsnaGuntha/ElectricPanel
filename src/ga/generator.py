@@ -409,8 +409,7 @@ def generate_ga_svg(
     hmi_side_d = mm_s(20)  # 20 mm door panel projection depth
     dwg.add(dwg.rect(insert=(SIDE_X, hmi_side_y), size=(hmi_side_d, hmi_side_h),
                      fill=HMI_BG, stroke=HMI_STROKE, stroke_width=1.2))
-    dwg.add(dwg.text("HMI", insert=(SIDE_X + hmi_side_d + 6, hmi_side_y + hmi_side_h / 2 + 4),
-                     font_size=max(12, mm(15)), fill=LBL_C, font_family="Arial", font_weight="bold"))
+
 
 
     # Side label

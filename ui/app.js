@@ -901,8 +901,8 @@ async function analyzeBillUploads() {
 
       if (bessResult) {
         state.bessRecommendation = bessResult;
-        $("bessInsufficientMessage").add ? $("bessInsufficientMessage").add("hidden") : $("bessInsufficientMessage").classList.add("hidden");
-        $("bessCalculations").remove ? $("bessCalculations").remove("hidden") : $("bessCalculations").classList.remove("hidden");
+        $("bessInsufficientMessage").classList.add("hidden");
+        $("bessCalculations").classList.remove("hidden");
 
         $("bessDailyConsumption").textContent = `${bessResult.dailyConsumption.toFixed(2)} kWh/day`;
         $("bessRte").textContent = `${(bessResult.roundTripEfficiency * 100).toFixed(0)}%`;

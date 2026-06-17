@@ -204,6 +204,7 @@ function initCustomSelect(dropdownId, hiddenInputId, onChangeFn) {
 
   function close() {
     dropdown.classList.remove("is-open");
+    dropdown.classList.remove("open-upward");
     dropdown.setAttribute("aria-expanded", "false");
   }
 
@@ -212,11 +213,26 @@ function initCustomSelect(dropdownId, hiddenInputId, onChangeFn) {
     document.querySelectorAll(".custom-select.is-open").forEach((el) => {
       if (el !== dropdown) {
         el.classList.remove("is-open");
+        el.classList.remove("open-upward");
         el.setAttribute("aria-expanded", "false");
       }
     });
     dropdown.classList.add("is-open");
     dropdown.setAttribute("aria-expanded", "true");
+
+    const rect = dropdown.getBoundingClientRect();
+    const menu = dropdown.querySelector(".custom-select-menu");
+    if (menu) {
+      const menuHeight = menu.offsetHeight;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        dropdown.classList.add("open-upward");
+      } else {
+        dropdown.classList.remove("open-upward");
+      }
+    }
   }
 
   function selectOption(value, label) {
@@ -1303,6 +1319,7 @@ function bindEvents() {
   document.addEventListener("click", () => {
     document.querySelectorAll(".custom-select.is-open").forEach((el) => {
       el.classList.remove("is-open");
+      el.classList.remove("open-upward");
       el.setAttribute("aria-expanded", "false");
     });
   });

@@ -38,7 +38,8 @@ body[data-theme="light"] {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
 }
@@ -85,7 +86,10 @@ body[data-theme="light"] .topbar {
   color: var(--accent-2);
 }
 
-h1, h2, h3, p {
+h1,
+h2,
+h3,
+p {
   margin-top: 0;
 }
 
@@ -617,8 +621,7 @@ select option {
   white-space: nowrap;
 }
 
-body[data-theme="light"] select option {
-}
+body[data-theme="light"] select option {}
 
 input:focus,
 select:focus {
@@ -637,9 +640,9 @@ select:hover {
 .custom-select {
   position: relative;
   width: 100%;
-  height: 38px;
-  min-height: 38px;
-  max-height: 38px;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0 30px 0 0.62rem;
@@ -702,8 +705,17 @@ body[data-theme="light"] .custom-select {
 
 body[data-theme="light"] .custom-select-menu {
   background: #ffffff;
-  border-color: rgba(0,0,0,0.12);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.custom-select.open-upward .custom-select-menu {
+  top: auto;
+  bottom: calc(100% + 3px);
+}
+
+body[data-theme="light"] .custom-select.open-upward .custom-select-menu {
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .custom-select.is-open .custom-select-menu {
@@ -794,7 +806,7 @@ input[type="number"] {
   align-items: center;
 }
 
-.stacked-inputs .row > span {
+.stacked-inputs .row>span {
   align-self: center;
   line-height: 1.2;
 }
@@ -1365,6 +1377,7 @@ body.loading .app-shell {
 }
 
 @media (max-width: 760px) {
+
   .grid.two-col,
   .summary-grid,
   .diagrams-grid {

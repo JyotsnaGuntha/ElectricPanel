@@ -1094,6 +1094,22 @@ button:active {
   border: 1px solid var(--border);
 }
 
+.danger-ghost-button {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.danger-ghost-button:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
+}
+
+.danger-ghost-button:active {
+  transform: translateY(0);
+}
+
 .icon-button {
   color: var(--text);
   background: rgba(148, 163, 184, 0.12);

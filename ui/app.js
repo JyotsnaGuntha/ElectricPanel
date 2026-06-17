@@ -490,6 +490,33 @@ function closeUploadModal() {
   $("uploadDropzone").classList.remove("is-dragover");
 }
 
+function clearUploadedFiles() {
+  state.uploadedBills = [];
+  state.solarRecommendation = null;
+  state.solarTotalConsumption = null;
+  state.solarUsableUnits = null;
+  state.solarMonthsCount = null;
+  state.solarAvgMonthlyConsumption = null;
+  state.solarAvgDailyConsumption = null;
+  state.bessRecommendation = null;
+
+  setSolarInputMode("upload", null);
+
+  $("billFilesInput").value = "";
+  renderBillFileList();
+  $("uploadAnalysisResult").classList.add("hidden");
+  populateUploadModalResult();
+
+  const solarInput = $("solarKw");
+  if (solarInput) {
+    solarInput.value = "";
+  }
+
+  if (state.lastDesign) {
+    renderMetrics(state.lastDesign);
+  }
+}
+
 function openFilePreview(index) {
   const file = state.uploadedBills[index];
   const source = getBillPreviewSource(file);
@@ -1100,7 +1127,7 @@ function bindEvents() {
   $("uploadBillsButton").addEventListener("click", openUploadModal);
   $("uploadModalClose").addEventListener("click", closeUploadModal);
   $("uploadModalBackdrop").addEventListener("click", closeUploadModal);
-  $("cancelUploadButton").addEventListener("click", closeUploadModal);
+  $("clearFilesButton").addEventListener("click", clearUploadedFiles);
   $("selectFilesButton").addEventListener("click", chooseBillFiles);
   $("billFilesInput").addEventListener("change", async (event) => addUploadedBills(event.target.files));
   $("analyzeBillsButton").addEventListener("click", analyzeBillUploads);

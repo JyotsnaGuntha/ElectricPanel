@@ -174,8 +174,15 @@ def _extract_slot_rows_from_text(text: str) -> List[Dict[str, float]]:
     if not text:
         return []
 
+    slot_map = _extract_zone_time_mappings(text)
     slot_values: Dict[str, float] = {}
-    slot_pattern = re.compile(r"^\s*(NH|EP|OP|MP)\s+(.*)$", re.IGNORECASE | re.MULTILINE)
+    
+    keys = sorted(slot_map.keys(), key=len, reverse=True)
+    keys_pat = "|".join(re.escape(k) for k in keys if len(k) <= 10)
+    if not keys_pat:
+        keys_pat = "NH|EP|OP|MP"
+        
+    slot_pattern = re.compile(r"^\s*(" + keys_pat + r")\s+(.*)$", re.IGNORECASE | re.MULTILINE)
     for match in slot_pattern.finditer(text):
         slot = match.group(1).upper()
         rest = match.group(2)
@@ -183,7 +190,14 @@ def _extract_slot_rows_from_text(text: str) -> List[Dict[str, float]]:
         parsed_numbers = [value for value in (_parse_number(item) for item in raw_numbers) if value is not None]
         consumed = _pick_consumed_from_slot_numbers(parsed_numbers)
         if consumed is not None:
-            slot_values[slot.lower()] = consumed
+            mapped_slot = slot_map.get(slot)
+            if not mapped_slot:
+                for k, v in slot_map.items():
+                    if k in slot:
+                        mapped_slot = v
+                        break
+            if mapped_slot:
+                slot_values[mapped_slot.lower()] = consumed
 
     total = None
     total_match = re.search(r"^\s*TOTAL\s+(.*)$", text, flags=re.IGNORECASE | re.MULTILINE)
@@ -456,6 +470,140 @@ def extract_bill_using_llamaparse(pdf_bytes):
         doc.text for doc in documents
     )
 
+def _parse_time_str(t_str: str) -> float | None:
+    t_str = t_str.strip().upper()
+    if not t_str:
+        return None
+        
+    # Check for AM/PM format
+    am_pm_match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(AM|PM)", t_str)
+    if am_pm_match:
+        hour = int(am_pm_match.group(1))
+        minute = int(am_pm_match.group(2)) if am_pm_match.group(2) else 0
+        am_pm = am_pm_match.group(3)
+        if am_pm == "PM" and hour != 12:
+            hour += 12
+        elif am_pm == "AM" and hour == 12:
+            hour = 0
+        return hour + minute / 60.0
+
+    # Check for HH:MM or HH.MM format
+    hh_mm_match = re.search(r"(\d{1,2})[:.](\d{2})", t_str)
+    if hh_mm_match:
+        hour = int(hh_mm_match.group(1))
+        minute = int(hh_mm_match.group(2))
+        return hour + minute / 60.0
+        
+    # Check for plain hour format (e.g. "6" or "17" or "0600")
+    if t_str.isdigit():
+        val = int(t_str)
+        if len(t_str) == 4:  # e.g. "0600" or "1700"
+            hour = val // 100
+            minute = val % 100
+            return hour + minute / 60.0
+        elif val <= 24:      # e.g. "6" or "17"
+            return float(val)
+            
+    return None
+
+def _parse_time_range(range_str: str) -> tuple[float, float] | None:
+    range_str = range_str.strip().lower()
+    # Replace separators with a standard character |
+    for sep in ["to", "till", "–", "—", "-"]:
+        if sep in range_str:
+            parts = range_str.split(sep, 1)
+            s_val = _parse_time_str(parts[0])
+            e_val = _parse_time_str(parts[1])
+            if s_val is not None and e_val is not None:
+                return s_val, e_val
+    return None
+
+def _map_time_range_to_period(range_str: str) -> str | None:
+    parsed = _parse_time_range(range_str)
+    if not parsed:
+        return None
+    s, e = parsed
+    
+    # Standard periods
+    periods = {
+        "OP": (0.0, 6.0),
+        "MP": (6.0, 9.0),
+        "NH": (9.0, 17.0),
+        "EP": (17.0, 24.0)
+    }
+    
+    overlaps = {}
+    for p_name, (S, E) in periods.items():
+        if e > s:
+            overlap = max(0.0, min(e, E) - max(s, S))
+        else:
+            # Wrap around midnight
+            overlap = max(0.0, min(24.0, E) - max(s, S)) + max(0.0, min(e, E) - max(0.0, S))
+        overlaps[p_name] = overlap
+        
+    best_period = max(overlaps, key=overlaps.get)
+    if overlaps[best_period] > 0.0:
+        return best_period
+    return None
+
+def _extract_zone_time_mappings(text: str) -> Dict[str, str]:
+    mappings = {}
+    lines = text.splitlines()
+    for line in lines:
+        # Check if line contains a time range
+        # Regex to find time ranges like 00:00-06:00, 00.00 to 06.00, 12 AM to 6 AM, etc.
+        time_range_pattern = r"(\d{1,2}(?:[:.]\d{2})?\s*(?:AM|PM)?)\s*(?:-|–|—|to|till)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:AM|PM)?)"
+        match = re.search(time_range_pattern, line, re.IGNORECASE)
+        if not match:
+            continue
+            
+        range_str = match.group(0)
+        period = _map_time_range_to_period(range_str)
+        if not period:
+            continue
+            
+        # Now find the slot/zone label in the same line
+        if line.startswith("|"):
+            cols = [c.strip() for c in line.split("|")[1:-1]]
+            # Find which column contains the range
+            range_col_idx = -1
+            for idx, col in enumerate(cols):
+                if range_str in col or col in range_str:
+                    range_col_idx = idx
+                    break
+            # Look at other columns for zone/slot label
+            for idx, col in enumerate(cols):
+                if idx == range_col_idx:
+                    continue
+                col_upper = col.upper()
+                label_match = re.search(r"\b(?:ZONE|SLOT|TOD)?\s*([A-D0-9])\b", col_upper)
+                if label_match:
+                    zone_label = label_match.group(1)
+                    mappings[zone_label] = period
+                    mappings[col_upper] = period
+                    mappings[f"ZONE {zone_label}"] = period
+                    mappings[f"SLOT {zone_label}"] = period
+        else:
+            line_upper = line.upper()
+            label_match = re.search(r"\b(?:ZONE|SLOT|TOD)?\s*([A-D0-9])\b", line_upper)
+            if label_match:
+                zone_label = label_match.group(1)
+                mappings[zone_label] = period
+                mappings[line_upper] = period
+                mappings[f"ZONE {zone_label}"] = period
+                mappings[f"SLOT {zone_label}"] = period
+                
+    # Always include standard mappings as a fallback if not overwritten
+    default_mappings = {
+        "NH": "NH", "EP": "EP", "OP": "OP", "MP": "MP",
+        "TOTAL": "TOTAL"
+    }
+    for k, v in default_mappings.items():
+        if k not in mappings:
+            mappings[k] = v
+            
+    return mappings
+
 def _find_consumed_column(lines: List[str], slot_map: Dict[str, str]) -> int:
     valid_rows = []
     for line in lines:
@@ -517,11 +665,7 @@ def _find_consumed_column(lines: List[str], slot_map: Dict[str, str]) -> int:
 
 def _extract_llamaparse_table_hardcoded(text: str, month: str):
     values = {}
-    slot_map = {
-        "A": "OP", "B": "MP", "C": "NH", "D": "EP",
-        "NH": "NH", "EP": "EP", "OP": "OP", "MP": "MP",
-        "TOTAL": "TOTAL"
-    }
+    slot_map = _extract_zone_time_mappings(text)
     
     lines = text.splitlines()
     consumed_idx = _find_consumed_column(lines, slot_map)
@@ -623,11 +767,7 @@ def _extract_llamaparse_table(text: str):
         return _extract_llamaparse_table_hardcoded(text, month)
         
     values = {}
-    slot_map = {
-        "A": "OP", "B": "MP", "C": "NH", "D": "EP",
-        "NH": "NH", "EP": "EP", "OP": "OP", "MP": "MP",
-        "TOTAL": "TOTAL"
-    }
+    slot_map = _extract_zone_time_mappings(text)
     
     for row in table_rows:
         if len(row) <= max(slot_idx, consum_idx):
@@ -677,11 +817,12 @@ Rules:
 
 1. If NH EP OP MP exist, use them directly.
 
-2. If bill contains TOD slots:
-   A -> OP
-   B -> MP
-   C -> NH
-   D -> EP
+2. If the bill contains TOD zones/slots (e.g., Zone A, B, C, D, or Zone 1, 2, 3, 4, etc.):
+   Do NOT assume fixed mappings (like Zone A is always OP). Instead, dynamically map each zone/slot to standard periods based on the associated time ranges:
+   - 00:00 – 06:00 (or 12 AM to 6 AM) → OP (Off-Peak Period)
+   - 06:00 – 09:00 (or 6 AM to 9 AM) → MP (Morning Period)
+   - 09:00 – 17:00 (or 9 AM to 5 PM) → NH (Normal Hours)
+   - 17:00 – 24:00 (or 5 PM to 12 AM) → EP (Evening Period)
 
 3. Extract UNIT CONSUMED values only.
 

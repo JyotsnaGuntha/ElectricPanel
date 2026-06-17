@@ -24,8 +24,18 @@ from __future__ import annotations
 
 import math
 from typing import Any, Dict, Iterable
+from decimal import Decimal, ROUND_HALF_UP
 
 OFF_PEAK_HOURS = 8
+
+
+def _round_half_up(value: float, decimals: int = 2) -> float:
+    try:
+        s = f"{value:.12f}"
+        d = Decimal(s)
+        return float(d.quantize(Decimal('1.' + '0' * decimals), rounding=ROUND_HALF_UP))
+    except Exception:
+        return round(value, decimals)
 
 
 def _round_up_to_step(value: float, step: int) -> int:
@@ -68,6 +78,12 @@ def _validate_row(row: Dict[str, Any]) -> Dict[str, float]:
     calculated_total = nh + ep + op + mp
     if abs(total - calculated_total) > 2:
         raise ValueError(f"Invalid UNIT CONSUMED values found for {month}.")
+
+    # Check if the extracted values are likely tariff rates (small values < 25.0)
+    # instead of actual energy consumption.
+    non_zero_vals = [val for val in (nh, ep, op, mp) if val > 0]
+    if non_zero_vals and all(val < 25.0 for val in non_zero_vals):
+        raise ValueError(f"Extracted values for {month} look like tariff rates (all < 25 Units).")
 
     return {
         "month": month,
@@ -121,15 +137,17 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         total_ep_units += row["ep"]
         total_op_units += row["op"]
         total_units += row["total"]
-        # Total Consumption = MP + EP
-        total_solar_consumption += (row["mp"] + row["ep"])
 
-    # Average Monthly Consumption = (MP + EP) / Total Number of Months
-    average_monthly_consumption = total_solar_consumption / months
-    # Average Daily Consumption = Average Monthly Consumption / 30
-    average_daily_consumption = average_monthly_consumption / 30.0
-    # Estimated Solar Capacity
-    recommended_kw = _round_practical_kw(average_daily_consumption / 4.2)
+    # 1. Total Solar Consumable Units = Σ(NH + MP)
+    solar_total_consumable = _round_half_up(total_nh_units + total_mp_units, 2)
+    # 2. Solar Usable Units = Total Solar Consumable Units ÷ 126
+    solar_usable_units = _round_half_up(solar_total_consumable / 126.0, 2)
+    # 3. Average Monthly Solar Usable Units = Solar Usable Units ÷ Number of Months
+    average_monthly_consumption = _round_half_up(solar_usable_units / months, 2)
+    # 4. Average Daily Consumption = Average Monthly Solar Usable Units ÷ 30
+    average_daily_consumption = _round_half_up(average_monthly_consumption / 30.0, 2)
+    # 5. Recommended Solar Capacity (kW) = Average Monthly Solar Capacity
+    recommended_kw = average_monthly_consumption
 
     bill_data = [
         {
@@ -176,9 +194,10 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         "months": months,
 
         # Solar Metrics
-        "solar_total_consumption": round(total_solar_consumption, 2),
-        "solar_avg_monthly_consumption": round(average_monthly_consumption, 2),
-        "solar_avg_daily_consumption": round(average_daily_consumption, 2),
+        "solar_total_consumable": solar_total_consumable,
+        "solar_usable_units": solar_usable_units,
+        "solar_avg_monthly_consumption": average_monthly_consumption,
+        "solar_avg_daily_consumption": average_daily_consumption,
         "recommended_kw": recommended_kw,
 
         # BESS Metrics

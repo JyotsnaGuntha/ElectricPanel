@@ -456,6 +456,65 @@ def extract_bill_using_llamaparse(pdf_bytes):
         doc.text for doc in documents
     )
 
+def _find_consumed_column(lines: List[str], slot_map: Dict[str, str]) -> int:
+    valid_rows = []
+    for line in lines:
+        if not line.startswith("|"):
+            continue
+        cols = [c.strip() for c in line.split("|")]
+        if len(cols) < 3:
+            continue
+        slot = cols[1].upper()
+        if slot in slot_map or any(k in slot for k in slot_map):
+            valid_rows.append(cols)
+            
+    if not valid_rows:
+        return 5
+        
+    num_cols = len(valid_rows[0])
+    scores = {idx: 0 for idx in range(2, num_cols)}
+    
+    for cols in valid_rows:
+        vals = {}
+        for idx in range(2, len(cols)):
+            try:
+                cleaned = cols[idx].replace(",", "").strip()
+                match = re.search(r"-?\d+(?:\.\d+)?", cleaned)
+                if match:
+                    vals[idx] = float(match.group(0))
+            except:
+                pass
+                
+        # Score the columns based on algebraic relationships
+        for idx, val in vals.items():
+            if idx not in scores:
+                continue
+            # Exclude very small numbers (likely tariff rates) as consumption
+            if val < 25.0:
+                scores[idx] -= 20
+                continue
+                
+            # Meter reading diff relation: B - A = C
+            for idx_a, val_a in vals.items():
+                for idx_b, val_b in vals.items():
+                    if idx_a != idx and idx_b != idx and idx_a != idx_b:
+                        if abs((val_b - val_a) - val) < 2.0 and val > 20.0:
+                            scores[idx] += 15
+                            
+            # Consumed * Rate = Total relation
+            for idx_rate, val_rate in vals.items():
+                for idx_total, val_total in vals.items():
+                    if idx_rate != idx and idx_total != idx and idx_rate != idx_total:
+                        if 1.0 < val_rate < 25.0:
+                            if abs((val * val_rate) - val_total) < 10.0:
+                                scores[idx] += 10
+
+    best_idx = max(scores, key=scores.get)
+    if scores[best_idx] <= 0:
+        return 5
+    return best_idx
+
+
 def _extract_llamaparse_table_hardcoded(text: str, month: str):
     values = {}
     slot_map = {
@@ -463,18 +522,28 @@ def _extract_llamaparse_table_hardcoded(text: str, month: str):
         "NH": "NH", "EP": "EP", "OP": "OP", "MP": "MP",
         "TOTAL": "TOTAL"
     }
-    for line in text.splitlines():
+    
+    lines = text.splitlines()
+    consumed_idx = _find_consumed_column(lines, slot_map)
+    print(f"Dynamically determined consumed units column index: {consumed_idx}")
+    
+    for line in lines:
         if not line.startswith("|"):
             continue
         cols = [c.strip() for c in line.split("|")]
-        if len(cols) < 6:
+        if len(cols) <= consumed_idx:
             continue
         slot = cols[1].upper()
         mapped_slot = slot_map.get(slot)
         if not mapped_slot:
+            for k, v in slot_map.items():
+                if k in slot:
+                    mapped_slot = v
+                    break
+        if not mapped_slot:
             continue
         try:
-            unit_consumed = float(cols[5].replace(",", ""))
+            unit_consumed = float(cols[consumed_idx].replace(",", ""))
             values[mapped_slot] = unit_consumed
         except:
             continue
@@ -544,8 +613,11 @@ def _extract_llamaparse_table(text: str):
     for i, h in enumerate(table_headers):
         if "SLOT" in h or "ZONE" in h or "TOD" in h:
             slot_idx = i
-        if "CONSUM" in h or "UNIT" in h or "DIFF" in h:
-            consum_idx = i
+        if ("CONSUM" in h or "DIFF" in h or "UNIT" in h) and "RATE" not in h and "TARIFF" not in h and "RS" not in h:
+            if "CONSUM" in h or "DIFF" in h:
+                consum_idx = i
+            elif consum_idx == -1:
+                consum_idx = i
             
     if slot_idx == -1 or consum_idx == -1:
         return _extract_llamaparse_table_hardcoded(text, month)
@@ -618,7 +690,9 @@ Rules:
    - Previous Reading
    - Meter Reading
 
-5. Return ONLY JSON.
+5. NEVER extract Unit Rate or Tariff Rate values (which are small decimal numbers like 6.4, 8.32, 4.8, 6.85, 8.91, 5.14, etc.). You must always extract the actual energy consumption values (UNIT CONSUMED) which are much larger integers.
+
+6. Return ONLY JSON.
 
 Schema:
 

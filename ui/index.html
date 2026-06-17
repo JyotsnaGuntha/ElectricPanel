@@ -36,7 +36,7 @@
               <div class="grid one-col">
                 <label id="solarKwField">
                   <span class="field-label-row">
-                    <span>Solar (kWp)</span>
+                    <span>Solar (kW)</span>
                     <span class="chip subtle hidden" id="recommendedInline" aria-live="polite">Suggested: -- kW</span>
                   </span>
                   <div class="solar-input-inline">
@@ -226,7 +226,7 @@
       <div class="upload-analysis-result hidden" id="uploadAnalysisResult">
         <div class="capacity-metrics-row">
           <div class="capacity-metric-box">
-            <span class="subtle">Suggested Solar Capacity</span>
+            <span class="subtle">Recommended Solar Capacity (kW)</span>
             <strong id="recommendedSolarLabel">-- kW</strong>
           </div>
           <div class="capacity-metric-box hidden" id="bessTopMetricBox">
@@ -245,23 +245,27 @@
               <h4>Solar Sizing System Factors</h4>
               <div class="bess-factors-grid">
                 <div class="bess-factor-card">
-                  <span class="subtle">Total Consumption (MP + EP)</span>
-                  <strong id="solarTotalConsumption">-- kWh</strong>
+                  <span class="subtle">Total Solar Consumable Units</span>
+                  <strong id="solarTotalConsumption">-- Units</strong>
+                </div>
+                <div class="bess-factor-card">
+                  <span class="subtle">Solar Usable Units</span>
+                  <strong id="solarUsableUnits">-- Units</strong>
                 </div>
                 <div class="bess-factor-card">
                   <span class="subtle">Number of Months Considered</span>
                   <strong id="solarMonthsCount">--</strong>
                 </div>
                 <div class="bess-factor-card">
-                  <span class="subtle">Average Monthly Consumption</span>
-                  <strong id="solarAvgMonthlyConsumption">-- kWh/month</strong>
+                  <span class="subtle">Average Monthly Solar Capacity</span>
+                  <strong id="solarAvgMonthlyConsumption">-- Units</strong>
                 </div>
                 <div class="bess-factor-card">
                   <span class="subtle">Average Daily Consumption</span>
-                  <strong id="solarAvgDailyConsumption">-- kWh/day</strong>
+                  <strong id="solarAvgDailyConsumption">-- Units/Day</strong>
                 </div>
                 <div class="bess-factor-card">
-                  <span class="subtle">Estimated Solar Capacity</span>
+                  <span class="subtle">Recommended Solar Capacity (kW)</span>
                   <strong id="solarEstimatedCapacity">-- kW</strong>
                 </div>
               </div>

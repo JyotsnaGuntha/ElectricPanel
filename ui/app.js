@@ -16,6 +16,7 @@ const state = {
   hasPendingChanges: false,
   solarRecommendation: null,
   solarTotalConsumption: null,
+  solarUsableUnits: null,
   solarMonthsCount: null,
   solarAvgMonthlyConsumption: null,
   solarAvgDailyConsumption: null,
@@ -437,10 +438,11 @@ function populateUploadModalResult() {
   if (state.solarRecommendation !== null) {
     $("recommendedSolarLabel").textContent = `${state.solarRecommendation} kW`;
     $("solarSizingSection").classList.remove("hidden");
-    $("solarTotalConsumption").textContent = state.solarTotalConsumption !== null ? `${state.solarTotalConsumption.toFixed(2)} kWh` : "-- kWh";
+    $("solarTotalConsumption").textContent = state.solarTotalConsumption !== null ? `${state.solarTotalConsumption.toFixed(2)} Units` : "-- Units";
+    $("solarUsableUnits").textContent = state.solarUsableUnits !== null ? `${state.solarUsableUnits.toFixed(2)} Units` : "-- Units";
     $("solarMonthsCount").textContent = state.solarMonthsCount !== null ? `${state.solarMonthsCount}` : "--";
-    $("solarAvgMonthlyConsumption").textContent = state.solarAvgMonthlyConsumption !== null ? `${state.solarAvgMonthlyConsumption.toFixed(2)} kWh/month` : "-- kWh/month";
-    $("solarAvgDailyConsumption").textContent = state.solarAvgDailyConsumption !== null ? `${state.solarAvgDailyConsumption.toFixed(2)} kWh/day` : "-- kWh/day";
+    $("solarAvgMonthlyConsumption").textContent = state.solarAvgMonthlyConsumption !== null ? `${state.solarAvgMonthlyConsumption.toFixed(2)} Units` : "-- Units";
+    $("solarAvgDailyConsumption").textContent = state.solarAvgDailyConsumption !== null ? `${state.solarAvgDailyConsumption.toFixed(2)} Units/Day` : "-- Units/Day";
     $("solarEstimatedCapacity").textContent = `${state.solarRecommendation} kW`;
   } else {
     $("recommendedSolarLabel").textContent = "-- kW";
@@ -902,10 +904,11 @@ async function analyzeBillUploads() {
 
     // Populate Solar Sizing section
     $("solarSizingSection").classList.remove("hidden");
-    $("solarTotalConsumption").textContent = `${response.solar_total_consumption.toFixed(2)} kWh`;
+    $("solarTotalConsumption").textContent = `${response.solar_total_consumable.toFixed(2)} Units`;
+    $("solarUsableUnits").textContent = `${response.solar_usable_units.toFixed(2)} Units`;
     $("solarMonthsCount").textContent = `${response.months}`;
-    $("solarAvgMonthlyConsumption").textContent = `${response.solar_avg_monthly_consumption.toFixed(2)} kWh/month`;
-    $("solarAvgDailyConsumption").textContent = `${response.solar_avg_daily_consumption.toFixed(2)} kWh/day`;
+    $("solarAvgMonthlyConsumption").textContent = `${response.solar_avg_monthly_consumption.toFixed(2)} Units`;
+    $("solarAvgDailyConsumption").textContent = `${response.solar_avg_daily_consumption.toFixed(2)} Units/Day`;
     $("solarEstimatedCapacity").textContent = `${response.recommended_kw} kW`;
 
     const billData = response.bill_data || [];
@@ -949,7 +952,8 @@ async function analyzeBillUploads() {
     $("uploadAnalysisResult").classList.remove("hidden");
     $("uploadAnalysisResult").scrollIntoView({ behavior: "smooth", block: "nearest" });
     state.solarRecommendation = response.recommended_kw;
-    state.solarTotalConsumption = response.solar_total_consumption;
+    state.solarTotalConsumption = response.solar_total_consumable;
+    state.solarUsableUnits = response.solar_usable_units;
     state.solarMonthsCount = response.months;
     state.solarAvgMonthlyConsumption = response.solar_avg_monthly_consumption;
     state.solarAvgDailyConsumption = response.solar_avg_daily_consumption;

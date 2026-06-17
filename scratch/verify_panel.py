@@ -39,20 +39,24 @@ for val in test_values:
 
 print("\n--- Testing Bill Recommendation Sizing & Calculations ---")
 sample_rows = [
-    {"month": "Jan 2026", "nh": 12000, "ep": 4000, "op": 6000, "mp": 2000, "total": 24000},
-    {"month": "Feb 2026", "nh": 11000, "ep": 3500, "op": 5500, "mp": 1800, "total": 21800},
-    {"month": "Mar 2026", "nh": 13000, "ep": 4500, "op": 6500, "mp": 2200, "total": 26200},
+    {"month": "M1", "nh": 40000, "ep": 0, "op": 0, "mp": 10000, "total": 50000},
+    {"month": "M2", "nh": 40000, "ep": 0, "op": 0, "mp": 10000, "total": 50000},
+    {"month": "M3", "nh": 40000, "ep": 0, "op": 0, "mp": 10000, "total": 50000},
+    {"month": "M4", "nh": 40000, "ep": 0, "op": 0, "mp": 10000, "total": 50000},
+    {"month": "M5", "nh": 40000, "ep": 0, "op": 0, "mp": 10000, "total": 50000},
+    {"month": "M6", "nh": 40000, "ep": 0, "op": 0, "mp": 10000, "total": 50000},
+    {"month": "M7", "nh": 49990.16, "ep": 0, "op": 0, "mp": 10000, "total": 59990.16},
 ]
 
 try:
     analysis = calculate_bill_recommendation(sample_rows)
     print("Bill Recommendation Calculation Succeeded!")
     print("Results:")
-    print(f"  Months Analyzed: {analysis['months']}")
-    print(f"  Suggested Solar Capacity: {analysis['recommended_kw']} kW")
-    print(f"  Daily OP Consumption: {analysis['daily_op_units']:.2f} kWh/day")
-    print(f"  Suggested BESS Capacity: {analysis['recommended_bess_kwh']:.2f} kWh")
-    print(f"  Suggested BESS Power: {analysis['recommended_bess_kw']:.2f} kW")
-    print(f"  Calculated Backup Duration: {analysis['backup_hours']} Hrs")
+    print(f"  Total Solar Consumable Units: {analysis['solar_total_consumable']} Units")
+    print(f"  Solar Usable Units: {analysis['solar_usable_units']} Units")
+    print(f"  Number of Months Considered: {analysis['months']}")
+    print(f"  Average Monthly Solar Capacity: {analysis['solar_avg_monthly_consumption']} Units")
+    print(f"  Average Daily Consumption: {analysis['solar_avg_daily_consumption']} Units/Day")
+    print(f"  Recommended Solar Capacity: {analysis['recommended_kw']} kW")
 except Exception as e:
     print("Bill Recommendation failed:", e)

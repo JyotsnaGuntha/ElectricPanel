@@ -86,7 +86,8 @@ class MicrogridBridge:
                 "average_monthly_op_units": analysis["average_monthly_op_units"],
                 "months": analysis["months"],
                 "bill_data": analysis.get("bill_data", []),
-                "solar_total_consumption": analysis.get("solar_total_consumption", 0.0),
+                "solar_total_consumable": analysis.get("solar_total_consumable", 0.0),
+                "solar_usable_units": analysis.get("solar_usable_units", 0.0),
                 "solar_avg_monthly_consumption": analysis.get("solar_avg_monthly_consumption", 0.0),
                 "solar_avg_daily_consumption": analysis.get("solar_avg_daily_consumption", 0.0),
             }

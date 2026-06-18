@@ -453,38 +453,20 @@ function renderBillFileList() {
 function populateUploadModalResult() {
   if (state.solarRecommendation !== null) {
     $("recommendedSolarLabel").textContent = `${state.solarRecommendation} kW`;
-    $("solarSizingSection").classList.remove("hidden");
-    $("solarTotalConsumption").textContent = state.solarTotalConsumption !== null ? `${state.solarTotalConsumption.toFixed(2)} Units` : "-- Units";
-    $("solarUsableUnits").textContent = state.solarUsableUnits !== null ? `${state.solarUsableUnits.toFixed(2)} Units` : "-- Units";
-    $("solarMonthsCount").textContent = state.solarMonthsCount !== null ? `${state.solarMonthsCount}` : "--";
-    $("solarAvgMonthlyConsumption").textContent = state.solarAvgMonthlyConsumption !== null ? `${state.solarAvgMonthlyConsumption.toFixed(2)} Units` : "-- Units";
-    $("solarAvgDailyConsumption").textContent = state.solarAvgDailyConsumption !== null ? `${state.solarAvgDailyConsumption.toFixed(2)} Units/Day` : "-- Units/Day";
-    $("solarEstimatedCapacity").textContent = `${state.solarRecommendation} kW`;
   } else {
     $("recommendedSolarLabel").textContent = "-- kW";
-    $("solarSizingSection").classList.add("hidden");
   }
 
   if (state.bessRecommendation) {
     const bess = state.bessRecommendation;
-    $("bessSizingSection").classList.remove("hidden");
-    $("bessInsufficientMessage").classList.add("hidden");
-    $("bessCalculations").classList.remove("hidden");
-
-    $("bessDailyConsumption").textContent = bess.dailyConsumption ? `${bess.dailyConsumption.toFixed(2)} kWh/day` : "-- kWh/day";
-    $("bessRte").textContent = `${(bess.roundTripEfficiency * 100).toFixed(0)}%`;
-    $("bessDod").textContent = `${(bess.depthOfDischarge * 100).toFixed(0)}%`;
-    $("bessPeakHrs").textContent = `${bess.backup_hours} Hrs`;
-
     $("bessTopMetricBox").classList.remove("hidden");
     const roundedKw = Math.round(bess.energyPowerKw);
     const roundedKwh = Math.round(bess.batterySizeKwh);
     const roundedHours = bess.backup_hours;
     $("bessCapacityLabel").textContent = `${roundedKw} kW / ${roundedKwh} kWh`;
-    $("bessHoursLabel").textContent = `(Hours - ${roundedHours})`;
+    $("bessHoursLabel").textContent = `(${roundedHours} Hrs)`;
   } else {
     $("bessTopMetricBox").classList.add("hidden");
-    $("bessSizingSection").classList.add("hidden");
   }
 }
 
@@ -850,7 +832,7 @@ function renderMetrics(design) {
     const roundedKw = Math.round(bess.energyPowerKw);
     const roundedKwh = Math.round(bess.batterySizeKwh);
     const hours = bess.backup_hours || Math.round(bess.batterySizeKwh / bess.energyPowerKw);
-    items.push(["BESS Capacity", `${roundedKw} kW / ${roundedKwh} kWh<br><span style="font-size: 0.85em; opacity: 0.8; font-weight: normal;">(Hours - ${hours})</span>`]);
+    items.push(["BESS Capacity", `${roundedKw} kW / ${roundedKwh} kWh<br><span style="font-size: 0.85em; opacity: 0.8; font-weight: normal;">(${hours} Hrs)</span>`]);
   }
 
   $("summaryGrid").innerHTML = items
@@ -945,41 +927,24 @@ async function analyzeBillUploads() {
 
     $("recommendedSolarLabel").textContent = `${response.recommended_kw} kW`;
 
-    // Populate Solar Sizing section
-    $("solarSizingSection").classList.remove("hidden");
-    $("solarTotalConsumption").textContent = `${response.solar_total_consumable.toFixed(2)} Units`;
-    $("solarUsableUnits").textContent = `${response.solar_usable_units.toFixed(2)} Units`;
-    $("solarMonthsCount").textContent = `${response.months}`;
-    $("solarAvgMonthlyConsumption").textContent = `${response.solar_avg_monthly_consumption.toFixed(2)} Units`;
-    $("solarAvgDailyConsumption").textContent = `${response.solar_avg_daily_consumption.toFixed(2)} Units/Day`;
-    $("solarEstimatedCapacity").textContent = `${response.recommended_kw} kW`;
-
     const billData = response.bill_data || [];
-    $("bessSizingSection").classList.remove("hidden");
 
     if (billData.length === 0) {
       state.bessRecommendation = null;
-      $("bessInsufficientMessage").classList.remove("hidden");
-      $("bessCalculations").classList.add("hidden");
     } else {
       const bessResult = calculateBessCapacity(billData);
 
       if (bessResult) {
         state.bessRecommendation = bessResult;
-        $("bessInsufficientMessage").classList.add("hidden");
-        $("bessCalculations").classList.remove("hidden");
 
-        $("bessDailyConsumption").textContent = `${bessResult.dailyConsumption.toFixed(2)} kWh/day`;
-        $("bessRte").textContent = `${(bessResult.roundTripEfficiency * 100).toFixed(0)}%`;
-        $("bessDod").textContent = `${(bessResult.depthOfDischarge * 100).toFixed(0)}%`;
-        $("bessPeakHrs").textContent = `${bessResult.backup_hours} Hrs`;
+
 
         $("bessTopMetricBox").classList.remove("hidden");
         const roundedKw = Math.round(bessResult.energyPowerKw);
         const roundedKwh = Math.round(bessResult.batterySizeKwh);
         const roundedHours = bessResult.backup_hours;
         $("bessCapacityLabel").textContent = `${roundedKw} kW / ${roundedKwh} kWh`;
-        $("bessHoursLabel").textContent = `(Hours - ${roundedHours})`;
+        $("bessHoursLabel").textContent = `(${roundedHours} Hrs)`;
 
         // Immediately refresh the main summary row if a design is already shown
         if (state.lastDesign) {
@@ -987,8 +952,6 @@ async function analyzeBillUploads() {
         }
       } else {
         state.bessRecommendation = null;
-        $("bessInsufficientMessage").classList.remove("hidden");
-        $("bessCalculations").classList.add("hidden");
       }
     }
 

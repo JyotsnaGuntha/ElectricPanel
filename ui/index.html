@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="style.css" />
   <script defer src="app.js"></script>
 </head>
+
 <body data-theme="dark">
   <div class="app-shell">
     <header class="topbar">
@@ -44,22 +46,14 @@
                   </span>
                   <div class="solar-input-inline">
                     <input id="solarKw" type="number" min="0" step="1" placeholder="Enter capacity" />
-                    <button class="plain-icon-button solar-upload-button" id="uploadBillsButton" type="button" aria-label="Upload electricity bills" title="Upload electricity bills">
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="22" 
-                        height="22" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        stroke-width="2" 
-                        stroke-linecap="round" 
-                        stroke-linejoin="round" 
-                        class="lucide lucide-upload-icon lucide-upload"
-                      >
-                        <path d="M12 3v12"/>
-                        <path d="m17 8-5-5-5 5"/>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <button class="plain-icon-button solar-upload-button" id="uploadBillsButton" type="button"
+                      aria-label="Upload electricity bills" title="Upload electricity bills">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-upload-icon lucide-upload">
+                        <path d="M12 3v12" />
+                        <path d="m17 8-5-5-5 5" />
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                       </svg>
                     </button>
                   </div>
@@ -70,15 +64,16 @@
                 </label>
                 <label>
                   <span>Number of DGs</span>
-                  <input id="numDg" type="number" min="0" max="4" step="1" placeholder="Enter number of DGs" />
+                  <input id="numDg" type="number" min="0" step="1" placeholder="Enter number of DGs" />
                 </label>
                 <label>
                   <span>Outgoing Feeders</span>
-                  <input id="numOutputs" type="number" min="1" max="10" step="1" placeholder="Enter outgoing feeders" />
+                  <input id="numOutputs" type="number" min="1" step="1" placeholder="Enter outgoing feeders" />
                 </label>
                 <label>
                   <span>Busbar Material</span>
-                  <div class="custom-select" id="busbarMaterialDropdown" data-value="" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                  <div class="custom-select" id="busbarMaterialDropdown" data-value="" tabindex="0" role="combobox"
+                    aria-haspopup="listbox" aria-expanded="false">
                     <span class="custom-select-trigger">Select</span>
                     <div class="custom-select-menu" role="listbox">
                       <div class="custom-select-option" data-value="" role="option">Select</div>
@@ -90,7 +85,8 @@
                 </label>
                 <label>
                   <span>System Phases / Poles</span>
-                  <div class="custom-select" id="numPolesDropdown" data-value="" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                  <div class="custom-select" id="numPolesDropdown" data-value="" tabindex="0" role="combobox"
+                    aria-haspopup="listbox" aria-expanded="false">
                     <span class="custom-select-trigger">Select</span>
                     <div class="custom-select-menu" role="listbox">
                       <div class="custom-select-option" data-value="" role="option">Select</div>
@@ -100,7 +96,8 @@
                   </div>
                   <input type="hidden" id="numPoles" />
                 </label>
-                <button class="primary-button control-generate-button" id="generateButtonOutput" type="button">Generate</button>
+                <button class="primary-button control-generate-button" id="generateButtonOutput"
+                  type="button">Generate</button>
               </div>
             </article>
 
@@ -155,7 +152,8 @@
               </svg>
               <span>BOM</span>
             </button>
-            <button class="plain-icon-button theme-toggle-button" id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme"></button>
+            <button class="plain-icon-button theme-toggle-button" id="themeToggle" type="button"
+              aria-label="Switch theme" title="Switch theme"></button>
           </div>
         </div>
 
@@ -164,8 +162,10 @@
             <article class="card diagram-card">
               <div class="card-title-row">
                 <h3>Single Line Diagram</h3>
-                <button class="diagram-fullscreen-btn" id="fullscreenSldButton" type="button" aria-label="Fullscreen SLD" title="Fullscreen SLD">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button class="diagram-fullscreen-btn" id="fullscreenSldButton" type="button"
+                  aria-label="Fullscreen SLD" title="Fullscreen SLD">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 3 21 3 21 9"></polyline>
                     <polyline points="9 21 3 21 3 15"></polyline>
                     <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -179,8 +179,10 @@
             <article class="card diagram-card">
               <div class="card-title-row">
                 <h3>General Arrangement</h3>
-                <button class="diagram-fullscreen-btn" id="fullscreenGaButton" type="button" aria-label="Fullscreen GA" title="Fullscreen GA">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button class="diagram-fullscreen-btn" id="fullscreenGaButton" type="button" aria-label="Fullscreen GA"
+                  title="Fullscreen GA">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 3 21 3 21 9"></polyline>
                     <polyline points="9 21 3 21 3 15"></polyline>
                     <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -209,7 +211,8 @@
     <div class="upload-modal-card">
       <div class="card-title-row upload-modal-header">
         <h3 id="uploadModalTitle">Upload Energy Bills</h3>
-        <button class="ghost-button upload-modal-close" id="uploadModalClose" type="button" aria-label="Close upload modal">×</button>
+        <button class="ghost-button upload-modal-close" id="uploadModalClose" type="button"
+          aria-label="Close upload modal">×</button>
       </div>
 
       <div class="upload-dropzone" id="uploadDropzone">
@@ -238,7 +241,8 @@
             <span class="subtle-hours" id="bessHoursLabel">(Hours - --)</span>
           </div>
         </div>
-        <p id="uploadRecommendationPrompt">These suggested values have been auto-filled. You can edit them manually if needed.</p>
+        <p id="uploadRecommendationPrompt">These suggested values have been auto-filled. You can edit them manually if
+          needed.</p>
 
 
         <div class="upload-modal-actions">
@@ -249,15 +253,19 @@
     </div>
   </div>
 
-  <div class="fullscreen-overlay hidden" id="fullscreenOverlay" role="dialog" aria-modal="true" aria-label="Diagram fullscreen preview">
+  <div class="fullscreen-overlay hidden" id="fullscreenOverlay" role="dialog" aria-modal="true"
+    aria-label="Diagram fullscreen preview">
     <button class="fullscreen-close" id="fullscreenClose" type="button" aria-label="Close fullscreen">×</button>
     <img id="fullscreenImage" alt="Fullscreen diagram preview" />
   </div>
 
-  <div class="file-preview-overlay hidden" id="filePreviewOverlay" role="dialog" aria-modal="true" aria-label="Bill preview">
+  <div class="file-preview-overlay hidden" id="filePreviewOverlay" role="dialog" aria-modal="true"
+    aria-label="Bill preview">
     <div class="file-preview-shell">
-      <button class="plain-icon-button file-preview-close" id="filePreviewClose" type="button" aria-label="Close bill preview" title="Close bill preview">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <button class="plain-icon-button file-preview-close" id="filePreviewClose" type="button"
+        aria-label="Close bill preview" title="Close bill preview">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -279,4 +287,5 @@
     </div>
   </div>
 </body>
+
 </html>

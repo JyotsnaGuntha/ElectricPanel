@@ -242,6 +242,27 @@ h1 {
   line-height: 1.5;
 }
 
+.field-helper-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.auto-fill-button {
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  border-radius: var(--radius-sm);
+  height: 26px;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .solar-upload-button {
   width: 34px;
   height: 34px;

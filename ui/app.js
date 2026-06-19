@@ -1102,7 +1102,46 @@ async function loadInitialState() {
   setSolarInputMode(state.solarInputMode, state.solarRecommendation);
 }
 
+function autoFillInputs() {
+  $("solarKw").value = "120";
+  $("gridKw").value = "100";
+  $("numDg").value = "2";
+  $("numOutputs").value = "3";
+
+  if (state._busbarCtrl) {
+    state._busbarCtrl.setValue("Copper");
+  }
+  if (state._numPolesCtrl) {
+    state._numPolesCtrl.setValue("4");
+  }
+
+  state.solarInputMode = "manual";
+  setSolarInputMode("manual", state.solarRecommendation);
+  $("solarKw").value = "120";
+
+  // Render the dynamic inputs for DGs and Feeders
+  renderDynamicFields();
+
+  // Now populate the ratings inputs
+  const dgInputs = $("dgInputs").querySelectorAll("input");
+  if (dgInputs.length >= 2) {
+    dgInputs[0].value = "250";
+    dgInputs[1].value = "500";
+  }
+
+  const outgoingInputs = $("outgoingInputs").querySelectorAll("input");
+  outgoingInputs.forEach(input => {
+    input.value = "200";
+  });
+
+  // Save the state ratings
+  state.dg_ratings = collectDynamicInputValues("dgInputs");
+  state.outgoing_ratings = collectDynamicInputValues("outgoingInputs");
+  state.hasPendingChanges = true;
+}
+
 function bindEvents() {
+  $("autoFillButton").addEventListener("click", autoFillInputs);
   $("uploadBillsButton").addEventListener("click", openUploadModal);
   $("uploadModalClose").addEventListener("click", closeUploadModal);
   $("uploadModalBackdrop").addEventListener("click", closeUploadModal);

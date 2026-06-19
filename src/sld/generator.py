@@ -117,63 +117,78 @@ def generate_sld(
                      font_size=13, fill=auto_manual_color, text_anchor="middle"))
     
     # ────────────────────────────────────────────────────────────────────────────────
-    # Draw DG incomers
+    # Draw Incomers (Ordered: DG N, ..., DG 1, Grid, Solar)
     # ────────────────────────────────────────────────────────────────────────────────
+    incomers_to_draw = []
+    
+    # DGs in reverse order (DG N, ..., DG 1)
+    for i in reversed(range(int(num_dg))):
+        incomers_to_draw.append({
+            "type": "dg",
+            "index": i,
+            "tag": f"I/C {i + 1}",
+        })
+        
+    # Grid
+    grid_tag_index = int(num_dg) + 1
+    if grid_kw > 0:
+        incomers_to_draw.append({
+            "type": "grid",
+            "tag": f"I/C {grid_tag_index}",
+        })
+        
+    # Solar
+    solar_tag_index = int(num_dg) + (2 if grid_kw > 0 else 1)
+    if solar_kw > 0:
+        incomers_to_draw.append({
+            "type": "solar",
+            "tag": f"I/C {solar_tag_index}",
+        })
+
     current_x = x_init
     active_ics_x = []
-    ic_index = 1
     
-    for i in range(int(num_dg)):
+    for inc in incomers_to_draw:
         cx = current_x
-        dwg.add(dwg.text(f"{system_calcs.dg_ratings_kva[i]} kVA", insert=(cx, y_sources - 85), 
-                         font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
-        dwg.add(dwg.circle(center=(cx, y_sources), r=45, stroke=dg_circle_color, 
-                          fill="none", stroke_width=2.5))
-        dwg.add(dwg.text(f"DG {i + 1}", insert=(cx, y_sources + 7), 
-                         font_size=15, fill=theme_text, text_anchor="middle"))
-        dwg.add(dwg.line((cx, y_sources + 45), (cx, y_division + 50), 
-                         stroke=theme_text, stroke_width=2))
-        draw_mccb(dwg, cx, y_division + 100, system_calcs.dg_mccbs[i], num_poles, 
-                 f"I/C {ic_index}", theme_text, theme_sub, "left", get_component_type(system_calcs.dg_mccbs[i]))
-        dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
-                         stroke=theme_text, stroke_width=2))
+        if inc["type"] == "dg":
+            i = inc["index"]
+            dwg.add(dwg.text(f"{system_calcs.dg_ratings_kva[i]} kVA", insert=(cx, y_sources - 85), 
+                             font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
+            dwg.add(dwg.circle(center=(cx, y_sources), r=45, stroke=dg_circle_color, 
+                              fill="none", stroke_width=2.5))
+            dwg.add(dwg.text(f"DG {i + 1}", insert=(cx, y_sources + 7), 
+                             font_size=15, fill=theme_text, text_anchor="middle"))
+            dwg.add(dwg.line((cx, y_sources + 45), (cx, y_division + 50), 
+                             stroke=theme_text, stroke_width=2))
+            draw_mccb(dwg, cx, y_division + 100, system_calcs.dg_mccbs[i], num_poles, 
+                     inc["tag"], theme_text, theme_sub, "left", get_component_type(system_calcs.dg_mccbs[i]))
+            dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
+                             stroke=theme_text, stroke_width=2))
+            
+        elif inc["type"] == "grid":
+            dwg.add(dwg.text(f"{grid_kw} kW", insert=(cx, y_sources - 85), 
+                             font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
+            draw_tower(dwg, cx, y_sources - 30, theme_text)
+            dwg.add(dwg.line((cx, y_sources + 30), (cx, y_division + 50), 
+                             stroke=theme_text, stroke_width=2))
+            draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_grid, num_poles, 
+                     inc["tag"], theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_grid))
+            dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
+                             stroke=theme_text, stroke_width=2))
+            
+        elif inc["type"] == "solar":
+            dwg.add(dwg.text(f"{solar_kw} kWp", insert=(cx, y_sources - 85), 
+                             font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
+            draw_solar(dwg, cx, y_sources - 30, theme_text, solar_panel_fill, solar_sun_color)
+            dwg.add(dwg.line((cx, y_sources + 25), (cx, y_division + 50), 
+                             stroke=theme_text, stroke_width=2))
+            draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_solar, num_poles, 
+                     inc["tag"], theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_solar))
+            dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
+                             stroke=theme_text, stroke_width=2))
+            
         active_ics_x.append(cx)
         current_x += inc_spacing
-        ic_index += 1
-    
-    # ────────────────────────────────────────────────────────────────────────────────
-    # Draw grid incomer
-    # ────────────────────────────────────────────────────────────────────────────────
-    if grid_kw > 0:
-        cx = current_x
-        dwg.add(dwg.text(f"{grid_kw} kW", insert=(cx, y_sources - 85), 
-                         font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
-        draw_tower(dwg, cx, y_sources - 30, theme_text)
-        dwg.add(dwg.line((cx, y_sources + 30), (cx, y_division + 50), 
-                         stroke=theme_text, stroke_width=2))
-        draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_grid, num_poles, 
-                 f"I/C {ic_index}", theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_grid))
-        dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
-                         stroke=theme_text, stroke_width=2))
-        active_ics_x.append(cx)
-        current_x += inc_spacing
-        ic_index += 1
-    
-    # ────────────────────────────────────────────────────────────────────────────────
-    # Draw solar incomer
-    # ────────────────────────────────────────────────────────────────────────────────
-    if solar_kw > 0:
-        cx = current_x
-        dwg.add(dwg.text(f"{solar_kw} kWp", insert=(cx, y_sources - 85), 
-                         font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
-        draw_solar(dwg, cx, y_sources - 30, theme_text, solar_panel_fill, solar_sun_color)
-        dwg.add(dwg.line((cx, y_sources + 25), (cx, y_division + 50), 
-                         stroke=theme_text, stroke_width=2))
-        draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_solar, num_poles, 
-                 f"I/C {ic_index}", theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_solar))
-        dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
-                         stroke=theme_text, stroke_width=2))
-        active_ics_x.append(cx)
     
     # ────────────────────────────────────────────────────────────────────────────────
     # Draw busbar

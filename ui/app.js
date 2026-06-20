@@ -2,6 +2,7 @@ const DEFAULT_STATE = {
   theme: "dark",
   solar_kw: null,
   grid_kw: null,
+  bess_kwh: null,
   num_dg: null,
   dg_ratings: [],
   num_outputs: null,
@@ -510,6 +511,11 @@ function clearUploadedFiles() {
     solarInput.value = "";
   }
 
+  const bessInput = $("bessKwh");
+  if (bessInput) {
+    bessInput.value = "";
+  }
+
   if (state.lastDesign) {
     renderMetrics(state.lastDesign);
   }
@@ -677,6 +683,7 @@ function collectInputs() {
 
   const solarKwRaw = $("solarKw").value;
   const gridKwRaw = $("gridKw").value;
+  const bessKwhRaw = $("bessKwh").value;
   const numDgRaw = $("numDg").value;
   const numOutputsRaw = $("numOutputs").value;
   const busbarMaterial = $("busbarMaterial").value;
@@ -687,6 +694,9 @@ function collectInputs() {
   }
   if (gridKwRaw === "") {
     throw new Error("Please enter grid capacity.");
+  }
+  if (bessKwhRaw === "") {
+    throw new Error("Please enter BESS capacity.");
   }
   if (numDgRaw === "") {
     throw new Error("Please enter number of DGs.");
@@ -703,6 +713,7 @@ function collectInputs() {
 
   const solarKwNum = Number(solarKwRaw);
   const gridKwNum = Number(gridKwRaw);
+  const bessKwhNum = Number(bessKwhRaw);
 
   const numDg = Math.max(0, Math.floor(Number(numDgRaw)));
   const numOutputs = Math.max(0, Math.floor(Number(numOutputsRaw)));
@@ -717,10 +728,25 @@ function collectInputs() {
     throw new Error("Please enter all outgoing feeder ratings.");
   }
 
+  let bessKw = 0;
+  let bessHours = 0;
+  if (bessKwhNum > 0) {
+    if (state.bessRecommendation && Math.abs(state.bessRecommendation.batterySizeKwh - bessKwhNum) < 0.1) {
+      bessKw = state.bessRecommendation.energyPowerKw;
+      bessHours = state.bessRecommendation.backup_hours;
+    } else {
+      bessHours = (state.bessRecommendation && state.bessRecommendation.backup_hours) ? state.bessRecommendation.backup_hours : 8.0;
+      bessKw = bessKwhNum / bessHours;
+    }
+  }
+
   const payload = {
     theme: state.theme,
     solar_kw: solarKwNum,
     grid_kw: gridKwNum,
+    bess_kwh: bessKwhNum,
+    bess_kw: bessKw,
+    bess_hours: bessHours,
     num_dg: numDg,
     dg_ratings: dgInputs,
     num_outputs: numOutputs,
@@ -728,12 +754,6 @@ function collectInputs() {
     busbar_material: busbarMaterial,
     num_poles: Number(numPolesRaw),
   };
-
-  if (state.bessRecommendation) {
-    payload.bess_kwh = state.bessRecommendation.batterySizeKwh;
-    payload.bess_kw = state.bessRecommendation.energyPowerKw;
-    payload.bess_hours = state.bessRecommendation.backup_hours;
-  }
 
   return payload;
 }
@@ -827,7 +847,12 @@ function renderMetrics(design) {
     ["Panel Size", `${design.ga.panel_w} &times; ${design.ga.panel_h} &times; ${design.ga.panel_d} mm`],
   ];
 
-  if (state.bessRecommendation) {
+  if (design.inputs && design.inputs.bess_kwh > 0) {
+    const roundedKw = Math.round(design.inputs.bess_kw);
+    const roundedKwh = Math.round(design.inputs.bess_kwh);
+    const hours = Math.round(design.inputs.bess_hours);
+    items.push(["BESS Capacity", `${roundedKw} kW / ${roundedKwh} kWh<br><span style="font-size: 0.85em; opacity: 0.8; font-weight: normal;">(${hours} Hrs)</span>`]);
+  } else if (state.bessRecommendation) {
     const bess = state.bessRecommendation;
     const roundedKw = Math.round(bess.energyPowerKw);
     const roundedKwh = Math.round(bess.batterySizeKwh);
@@ -883,6 +908,7 @@ async function generateDesign() {
     }
     state.solar_kw = payload.solar_kw;
     state.grid_kw = payload.grid_kw;
+    state.bess_kwh = payload.bess_kwh;
     state.num_dg = payload.num_dg;
     state.dg_ratings = payload.dg_ratings;
     state.num_outputs = payload.num_outputs;
@@ -1058,6 +1084,7 @@ async function loadInitialState() {
   state.theme = initial.theme || DEFAULT_STATE.theme;
   state.solar_kw = initial.solar_kw ?? DEFAULT_STATE.solar_kw;
   state.grid_kw = initial.grid_kw ?? DEFAULT_STATE.grid_kw;
+  state.bess_kwh = initial.bess_kwh ?? DEFAULT_STATE.bess_kwh;
   state.num_dg = initial.num_dg ?? DEFAULT_STATE.num_dg;
   state.dg_ratings = initial.dg_ratings ?? DEFAULT_STATE.dg_ratings;
   state.num_outputs = initial.num_outputs ?? DEFAULT_STATE.num_outputs;
@@ -1084,6 +1111,7 @@ async function loadInitialState() {
 
   $("solarKw").value = formatInputValue(parseOptionalNumber(state.solar_kw));
   $("gridKw").value = formatInputValue(parseOptionalNumber(state.grid_kw));
+  $("bessKwh").value = formatInputValue(parseOptionalNumber(state.bess_kwh));
   $("numDg").value = formatInputValue(parseOptionalNumber(state.num_dg));
   $("numOutputs").value = formatInputValue(parseOptionalNumber(state.num_outputs));
   // Sync hidden inputs directly (programmatic setters also update UI if controllers are ready)
@@ -1105,6 +1133,7 @@ async function loadInitialState() {
 function autoFillInputs() {
   $("solarKw").value = "120";
   $("gridKw").value = "100";
+  $("bessKwh").value = "0";
   $("numDg").value = "2";
   $("numOutputs").value = "3";
 
@@ -1164,6 +1193,9 @@ function bindEvents() {
   $("proceedRecommendedButton").addEventListener("click", () => {
     if (state.solarRecommendation !== null) {
       setSolarInputMode("recommended", state.solarRecommendation);
+    }
+    if (state.bessRecommendation) {
+      $("bessKwh").value = formatInputValue(Math.round(state.bessRecommendation.batterySizeKwh));
     }
     closeUploadModal();
   });
@@ -1296,7 +1328,7 @@ function bindEvents() {
   });
 
   // Native-input change listeners (custom selects use their own onChange callback)
-  ["solarKw", "gridKw", "numDg", "numOutputs"].forEach((id) => {
+  ["solarKw", "gridKw", "bessKwh", "numDg", "numOutputs"].forEach((id) => {
     $(id).addEventListener("change", () => {
       state.hasPendingChanges = true;
       renderDynamicFields();
@@ -1326,7 +1358,7 @@ function bindEvents() {
     });
   });
 
-  ["solarKw", "gridKw", "numDg", "numOutputs"].forEach((id) => {
+  ["solarKw", "gridKw", "bessKwh", "numDg", "numOutputs"].forEach((id) => {
     $(id).addEventListener("input", () => {
       state.hasPendingChanges = true;
       renderDynamicFields();
@@ -1336,6 +1368,29 @@ function bindEvents() {
   $("solarKw").addEventListener("input", () => {
     state.solarInputMode = "manual";
     setSolarInputMode("manual", state.solarRecommendation);
+  });
+
+  $("bessKwh").addEventListener("input", () => {
+    const val = parseFloat($("bessKwh").value) || 0;
+    if (val > 0) {
+      if (!state.bessRecommendation) {
+        state.bessRecommendation = {
+          batterySizeKwh: val,
+          energyPowerKw: val / 8.0,
+          backup_hours: 8.0,
+          averageMonthlyConsumption: 0,
+          dailyConsumption: 0,
+          roundTripEfficiency: 0.85,
+          depthOfDischarge: 0.90
+        };
+      } else {
+        state.bessRecommendation.batterySizeKwh = val;
+        const hours = state.bessRecommendation.backup_hours || 8.0;
+        state.bessRecommendation.energyPowerKw = val / hours;
+      }
+    } else {
+      state.bessRecommendation = null;
+    }
   });
 
   document.addEventListener("input", (event) => {

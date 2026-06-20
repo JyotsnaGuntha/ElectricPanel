@@ -86,6 +86,16 @@ class DesignService:
         theme = payload.get("theme", self.theme)
         solar_kw = _as_float(payload.get("solar_kw", 0))
         grid_kw = _as_float(payload.get("grid_kw", 0))
+        bess_kwh = _as_float(payload.get("bess_kwh", 0))
+        bess_kw = _as_float(payload.get("bess_kw", 0))
+        bess_hours = _as_float(payload.get("bess_hours", 0))
+
+        if bess_kwh > 0:
+            if bess_hours <= 0:
+                bess_hours = 8.0
+            if bess_kw <= 0:
+                bess_kw = bess_kwh / bess_hours
+
         num_dg = max(0, _as_int(payload.get("num_dg", 0)))
         num_outputs = max(0, _as_int(payload.get("num_outputs", 0)))
         num_poles = _as_int(payload.get("num_poles", 0), 0)
@@ -212,6 +222,9 @@ class DesignService:
                 "theme": theme,
                 "solar_kw": solar_kw,
                 "grid_kw": grid_kw,
+                "bess_kwh": bess_kwh,
+                "bess_kw": bess_kw,
+                "bess_hours": bess_hours,
                 "num_dg": num_dg,
                 "dg_ratings": dg_ratings,
                 "num_outputs": num_outputs,
@@ -281,9 +294,9 @@ class DesignService:
             design["inputs"]["num_poles"],
             self._active_db(),
             design["summary"]["warning_flag"],
-            bess_kwh=payload.get("bess_kwh"),
-            bess_kw=payload.get("bess_kw"),
-            bess_hours=payload.get("bess_hours"),
+            bess_kwh=design["inputs"].get("bess_kwh"),
+            bess_kw=design["inputs"].get("bess_kw"),
+            bess_hours=design["inputs"].get("bess_hours"),
         )
 
     def build_ga_pdf(self, payload):

@@ -120,12 +120,12 @@ class DesignService:
         system_calcs = SystemCalculations(solar_kw=solar_kw, grid_kw=grid_kw, dg_ratings_kva=dg_ratings, mccb_db=active_db, bess_kw=bess_kw)
 
         incomer_list = list(system_calcs.dg_mccbs)
+        if bess_kw > 0:
+            incomer_list.append(system_calcs.mccb_bess)
         if grid_kw > 0:
             incomer_list.append(system_calcs.mccb_grid)
         if solar_kw > 0:
             incomer_list.append(system_calcs.mccb_solar)
-        if bess_kw > 0:
-            incomer_list.append(system_calcs.mccb_bess)
 
         total_busbar_current = system_calcs.total_busbar_current
         total_outgoing_rating = sum(mccb_outputs)

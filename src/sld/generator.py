@@ -130,29 +130,29 @@ def generate_sld(
             "index": i,
             "tag": f"I/C {i + 1}",
         })
+
+    # BESS
+    if bess_kwh > 0:
+        bess_tag_index = int(num_dg) + 1
+        incomers_to_draw.append({
+            "type": "bess",
+            "tag": f"I/C {bess_tag_index}",
+        })
         
     # Grid
-    grid_tag_index = int(num_dg) + 1
     if grid_kw > 0:
+        grid_tag_index = int(num_dg) + (1 if bess_kwh > 0 else 0) + 1
         incomers_to_draw.append({
             "type": "grid",
             "tag": f"I/C {grid_tag_index}",
         })
         
     # Solar
-    solar_tag_index = int(num_dg) + (2 if grid_kw > 0 else 1)
     if solar_kw > 0:
+        solar_tag_index = int(num_dg) + (1 if bess_kwh > 0 else 0) + (1 if grid_kw > 0 else 0) + 1
         incomers_to_draw.append({
             "type": "solar",
             "tag": f"I/C {solar_tag_index}",
-        })
-
-    # BESS
-    bess_tag_index = int(num_dg) + (1 if grid_kw > 0 else 0) + (1 if solar_kw > 0 else 0) + 1
-    if bess_kwh > 0:
-        incomers_to_draw.append({
-            "type": "bess",
-            "tag": f"I/C {bess_tag_index}",
         })
 
     current_x = x_init

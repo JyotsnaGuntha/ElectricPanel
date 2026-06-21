@@ -4,11 +4,11 @@ Main SLD (Single Line Diagram) generation logic.
 """
 
 import svgwrite as svg
-from .components import draw_mccb, draw_tower, draw_solar, draw_mgc
+from .components import draw_mccb, draw_tower, draw_solar, draw_mgc, draw_bess
 from ..constants import SLD_MIN_WIDTH, SLD_HEIGHT, SLD_MIN_COL_SPACING, SLD_MARGIN_LEFT, SLD_MARGIN_RIGHT
 
 
-def compute_canvas(n_dg, g_kw, s_kw, n_out):
+def compute_canvas(n_dg, g_kw, s_kw, n_out, bess_kwh=0.0):
     """
     Compute SLD canvas dimensions based on number of sources and outputs.
     
@@ -17,11 +17,12 @@ def compute_canvas(n_dg, g_kw, s_kw, n_out):
         g_kw: Grid capacity (kW)
         s_kw: Solar capacity (kW)
         n_out: Number of outgoing feeders
+        bess_kwh: BESS capacity (kWh)
     
     Returns:
         (width, height, inc_spacing, out_spacing, x_init)
     """
-    n_incomers = int(n_dg) + (1 if g_kw > 0 else 0) + (1 if s_kw > 0 else 0)
+    n_incomers = int(n_dg) + (1 if g_kw > 0 else 0) + (1 if s_kw > 0 else 0) + (1 if bess_kwh > 0 else 0)
     n_incomers = max(n_incomers, 1)
     n_out = max(int(n_out), 1)
     
@@ -53,6 +54,7 @@ def generate_sld(
     theme_text="#e2e8f0",
     theme_svg_stroke="#334155",
     theme_sub="#94a3b8",
+    bess_kwh=0.0,
 ):
     """
     Generate complete SLD diagram as SVG string.
@@ -70,11 +72,12 @@ def generate_sld(
         theme_text: Text color
         theme_svg_stroke: Line stroke color
         theme_sub: Subtitle color
+        bess_kwh: BESS capacity (kWh)
     
     Returns:
         (svg_string, canvas_width, canvas_height)
     """
-    width, height, inc_spacing, out_spacing, x_init = compute_canvas(num_dg, grid_kw, solar_kw, num_outputs)
+    width, height, inc_spacing, out_spacing, x_init = compute_canvas(num_dg, grid_kw, solar_kw, num_outputs, bess_kwh=bess_kwh)
 
     is_dark_theme = theme_text.lower() in ("#e2e8f0", "#e7eef9")
     scope_line_color = "#475569" if is_dark_theme else "#94a3b8"
@@ -86,6 +89,8 @@ def generate_sld(
     comm_label_color = "#c4b5fd" if is_dark_theme else "#64748b"
     solar_panel_fill = "#1e293b" if is_dark_theme else "#f8fafc"
     solar_sun_color = "#fbbf24" if is_dark_theme else "#d97706"
+    bess_fill_color = "#1e293b" if is_dark_theme else "#f8fafc"
+    bess_highlight_color = "#10b981" if is_dark_theme else "#059669"
     mgc_fill_color = "#1e1b4b" if is_dark_theme else "#eef2ff"
     mgc_stroke_color = "#a78bfa" if is_dark_theme else "#64748b"
     mgc_text_color = "#ffffff" if is_dark_theme else "#334155"
@@ -115,10 +120,7 @@ def generate_sld(
     draw_mgc(dwg, mgc_x, mgc_y, mgc_fill_color, mgc_stroke_color, mgc_text_color)
     dwg.add(dwg.text("Auto / Manual", insert=(mgc_x + 50, mgc_y - 15), 
                      font_size=13, fill=auto_manual_color, text_anchor="middle"))
-    
-    # ────────────────────────────────────────────────────────────────────────────────
-    # Draw Incomers (Ordered: DG N, ..., DG 1, Grid, Solar)
-    # ────────────────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────
     incomers_to_draw = []
     
     # DGs in reverse order (DG N, ..., DG 1)
@@ -145,6 +147,14 @@ def generate_sld(
             "tag": f"I/C {solar_tag_index}",
         })
 
+    # BESS
+    bess_tag_index = int(num_dg) + (1 if grid_kw > 0 else 0) + (1 if solar_kw > 0 else 0) + 1
+    if bess_kwh > 0:
+        incomers_to_draw.append({
+            "type": "bess",
+            "tag": f"I/C {bess_tag_index}",
+        })
+
     current_x = x_init
     active_ics_x = []
     
@@ -155,7 +165,7 @@ def generate_sld(
             dwg.add(dwg.text(f"{system_calcs.dg_ratings_kva[i]} kVA", insert=(cx, y_sources - 85), 
                              font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
             dwg.add(dwg.circle(center=(cx, y_sources), r=45, stroke=dg_circle_color, 
-                              fill="none", stroke_width=2.5))
+                               fill="none", stroke_width=2.5))
             dwg.add(dwg.text(f"DG {i + 1}", insert=(cx, y_sources + 7), 
                              font_size=15, fill=theme_text, text_anchor="middle"))
             dwg.add(dwg.line((cx, y_sources + 45), (cx, y_division + 50), 
@@ -184,6 +194,17 @@ def generate_sld(
                              stroke=theme_text, stroke_width=2))
             draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_solar, num_poles, 
                      inc["tag"], theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_solar))
+            dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
+                             stroke=theme_text, stroke_width=2))
+
+        elif inc["type"] == "bess":
+            dwg.add(dwg.text(f"{bess_kwh:.0f} kWh", insert=(cx, y_sources - 85), 
+                             font_size=16, font_weight="bold", fill=theme_text, text_anchor="middle"))
+            draw_bess(dwg, cx, y_sources, theme_text, bess_fill_color, bess_highlight_color)
+            dwg.add(dwg.line((cx, y_sources + 23), (cx, y_division + 50), 
+                             stroke=theme_text, stroke_width=2))
+            draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_bess, num_poles, 
+                     inc["tag"], theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_bess))
             dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 
                              stroke=theme_text, stroke_width=2))
             

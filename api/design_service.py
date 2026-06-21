@@ -117,13 +117,15 @@ class DesignService:
         outgoing_ratings = [_as_float(value, 0) for value in outgoing_ratings]
 
         mccb_outputs = [get_standard_rating(value, active_db) for value in outgoing_ratings]
-        system_calcs = SystemCalculations(solar_kw=solar_kw, grid_kw=grid_kw, dg_ratings_kva=dg_ratings, mccb_db=active_db)
+        system_calcs = SystemCalculations(solar_kw=solar_kw, grid_kw=grid_kw, dg_ratings_kva=dg_ratings, mccb_db=active_db, bess_kw=bess_kw)
 
         incomer_list = list(system_calcs.dg_mccbs)
         if grid_kw > 0:
             incomer_list.append(system_calcs.mccb_grid)
         if solar_kw > 0:
             incomer_list.append(system_calcs.mccb_solar)
+        if bess_kw > 0:
+            incomer_list.append(system_calcs.mccb_bess)
 
         total_busbar_current = system_calcs.total_busbar_current
         total_outgoing_rating = sum(mccb_outputs)
@@ -163,6 +165,7 @@ class DesignService:
             theme_colors["text"],
             theme_colors["svg_stroke"],
             theme_colors["subtitle"],
+            bess_kwh=bess_kwh,
         )
 
         bom_objects = generate_bom_items(
@@ -181,6 +184,8 @@ class DesignService:
             panel_w,
             panel_d,
             active_db,
+            bess_kwh=bess_kwh,
+            mccb_bess=system_calcs.mccb_bess,
         )
 
         bom_rows = []
@@ -328,6 +333,7 @@ class DesignService:
             solar_kw=inputs["solar_kw"],
             grid_kw=inputs["grid_kw"],
             dg_ratings_kva=inputs.get("dg_ratings", []),
+            bess_kw=inputs.get("bess_kw", 0.0),
         )
 
         theme_colors = get_theme_colors("light")
@@ -344,6 +350,7 @@ class DesignService:
             theme_colors["text"],
             theme_colors["svg_stroke"],
             theme_colors["subtitle"],
+            bess_kwh=inputs.get("bess_kwh", 0.0),
         )
         return self._normalize_export_svg_light(sld_svg), sld_w, sld_h
 

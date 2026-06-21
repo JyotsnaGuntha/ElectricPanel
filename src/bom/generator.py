@@ -51,6 +51,8 @@ def generate_bom_items(
     panel_w,
     panel_d,
     mccb_db=None,
+    bess_kwh=0,
+    mccb_bess=0,
 ):
     """
     Generate complete BOM item list.
@@ -93,6 +95,16 @@ def generate_bom_items(
         items.append(BOMItem(
             f"MCCB {mccb_grid}A, {num_poles}P, {mccb_grid_ka}",
             f"{mccb_grid}A",
+            1,
+            "Nos"
+        ))
+
+    # BESS incomer
+    if bess_kwh > 0:
+        mccb_bess_ka = get_mccb_breaking_capacity(mccb_bess, mccb_db)
+        items.append(BOMItem(
+            f"MCCB {mccb_bess}A, {num_poles}P, {mccb_bess_ka}",
+            f"{mccb_bess}A",
             1,
             "Nos"
         ))

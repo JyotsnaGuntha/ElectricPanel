@@ -164,3 +164,34 @@ def draw_mgc(
     
     dwg.add(dwg.text("MGC", insert=(x + size / 2, y + size / 2 + 8), 
                      font_size=20, fill=text_color, font_weight="bold", text_anchor="middle"))
+
+
+def draw_bess(
+    dwg,
+    x,
+    y,
+    theme_text="#e2e8f0",
+    fill_color="#1e293b",
+    bess_highlight_color="#10b981",
+):
+    """
+    Draw Battery Energy Storage System (BESS) symbol.
+    
+    Args:
+        dwg: svgwrite Drawing object
+        x, y: Base coordinate center for BESS (corresponding to y_sources)
+        theme_text: Line and text color
+        fill_color: Battery enclosure fill color
+        bess_highlight_color: Battery level indicators fill color
+    """
+    # Enclosure body
+    dwg.add(dwg.rect(insert=(x - 18, y - 22), size=(36, 45), fill=fill_color, 
+                     stroke=theme_text, stroke_width=2, rx=3))
+    # Battery positive terminal cap
+    dwg.add(dwg.rect(insert=(x - 7, y - 28), size=(14, 6), fill=theme_text, 
+                     stroke=theme_text, stroke_width=1, rx=1))
+    
+    # 3 horizontal bars showing charge level
+    dwg.add(dwg.rect(insert=(x - 12, y + 11), size=(24, 8), fill=bess_highlight_color, rx=1))
+    dwg.add(dwg.rect(insert=(x - 12, y - 1), size=(24, 8), fill=bess_highlight_color, rx=1))
+    dwg.add(dwg.rect(insert=(x - 12, y - 13), size=(24, 8), fill=bess_highlight_color, rx=1))

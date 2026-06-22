@@ -37,11 +37,17 @@ function calculateBessCapacity(billData) {
   let totalMp = 0;
   let totalEp = 0;
   let totalOp = 0;
+  let totalNh = 0;
+  let mpHoursSum = 0;
+  let opHoursSum = 0;
+  let mpHoursCount = 0;
+  let opHoursCount = 0;
 
   for (const bill of billData) {
     const mp = parseFloat(bill.mp);
     const ep = parseFloat(bill.ep);
     const op = parseFloat(bill.op || 0);
+    const nh = parseFloat(bill.nh || 0);
 
     if (isNaN(mp) || isNaN(ep) || isNaN(op) || mp < 0 || ep < 0 || op < 0) {
       return null;
@@ -49,48 +55,52 @@ function calculateBessCapacity(billData) {
     totalMp += mp;
     totalEp += ep;
     totalOp += op;
+    totalNh += nh;
+
+    const mpH = parseFloat(bill.mp_hours);
+    const opH = parseFloat(bill.op_hours);
+    if (!isNaN(mpH) && mpH > 0) {
+      mpHoursSum += mpH;
+      mpHoursCount++;
+    }
+    if (!isNaN(opH) && opH > 0) {
+      opHoursSum += opH;
+      opHoursCount++;
+    }
   }
 
   const avgMp = totalMp / billData.length;
+  const avgNh = totalNh / billData.length;
   const avgEp = totalEp / billData.length;
   const avgOp = totalOp / billData.length;
 
   const dailyMp = avgMp / 30;
+  const dailyNh = avgNh / 30;
   const dailyEp = avgEp / 30;
   const dailyOp = avgOp / 30;
 
-  const dailyMpEp = dailyMp + dailyEp;
-
-  let backup_hours = 6;
-  let dailyConsumption = 0;
-
-  if (dailyMpEp >= dailyOp) {
-    backup_hours = 6;
-    dailyConsumption = dailyMpEp;
-  } else {
-    backup_hours = 8;
-    dailyConsumption = dailyOp;
-  }
-
-  if (dailyConsumption <= 0) {
-    backup_hours = 6;
-    dailyConsumption = 0;
-  }
+  const dailyNonSolarUnits = dailyMp + dailyOp;
 
   const divisor = (ROUND_TRIP_EFFICIENCY * DEPTH_OF_DISCHARGE);
   if (divisor === 0) return null;
 
-  const batterySizeKwh = dailyConsumption / divisor;
-  const energyPowerKw = batterySizeKwh / backup_hours;
+  const batterySizeKwh = dailyNonSolarUnits / divisor;
+
+  const mp_hours = mpHoursCount > 0 ? (mpHoursSum / mpHoursCount) : 3.0;
+  const op_hours = opHoursCount > 0 ? (opHoursSum / opHoursCount) : 8.0;
+
+  const mp_power = dailyMp / mp_hours;
+  const op_power = dailyOp / op_hours;
+  const energyPowerKw = Math.max(mp_power, op_power);
 
   return {
-    averageMonthlyConsumption: (backup_hours === 6 ? (avgMp + avgEp) : avgOp),
-    dailyConsumption: dailyConsumption,
+    averageMonthlyConsumption: avgMp + avgOp,
+    dailyConsumption: dailyNonSolarUnits,
     roundTripEfficiency: ROUND_TRIP_EFFICIENCY,
     depthOfDischarge: DEPTH_OF_DISCHARGE,
     batterySizeKwh: batterySizeKwh,
     energyPowerKw: energyPowerKw,
-    backup_hours: backup_hours
+    backup_hours: op_hours
   };
 }
 
@@ -990,12 +1000,13 @@ async function analyzeBillUploads() {
     state.solarAvgMonthlyConsumption = response.solar_avg_monthly_consumption;
     state.solarAvgDailyConsumption = response.solar_avg_daily_consumption;
     if (!state.bessRecommendation && response.recommended_bess_kwh) {
+      const backupH = response.backup_hours || response.op_hours || 8;
       state.bessRecommendation = {
         batterySizeKwh: response.recommended_bess_kwh,
-        energyPowerKw: response.recommended_bess_kw || (response.recommended_bess_kwh / (response.backup_hours || 8)),
-        backup_hours: response.backup_hours || 8,
-        averageMonthlyConsumption: 0,
-        dailyConsumption: 0,
+        energyPowerKw: response.recommended_bess_kw || (response.recommended_bess_kwh / backupH),
+        backup_hours: backupH,
+        averageMonthlyConsumption: ((response.daily_mp || 0) + (response.daily_op || 0)) * 30,
+        dailyConsumption: (response.daily_mp || 0) + (response.daily_op || 0),
         roundTripEfficiency: 0.85,
         depthOfDischarge: 0.90
       };

@@ -443,10 +443,13 @@ def parse_uploaded_bill_files(files):
                         "total": 0.0
                     }]
 
+        durations = _extract_tod_durations_from_text(text)
         for row in file_rows:
             if not _clean_text(row.get("month")):
                 row["month"] = f"Entry {fallback_index}"
                 fallback_index += 1
+            row["mp_hours"] = durations.get("MP", 0.0)
+            row["op_hours"] = durations.get("OP", 0.0)
             rows.append(row)
 
         print(file_rows)
@@ -603,6 +606,40 @@ def _extract_zone_time_mappings(text: str) -> Dict[str, str]:
             mappings[k] = v
             
     return mappings
+
+
+def _extract_tod_durations_from_text(text: str) -> Dict[str, float]:
+    time_range_pattern = r"(\d{1,2}(?:[:.]\d{2})?\s*(?:AM|PM)?)\s*(?:-|–|—|to|till)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:AM|PM)?)"
+    
+    period_ranges = {
+        "OP": set(),
+        "MP": set(),
+        "NH": set(),
+        "EP": set()
+    }
+    
+    for line in text.splitlines():
+        for match in re.finditer(time_range_pattern, line, re.IGNORECASE):
+            range_str = match.group(0)
+            parsed = _parse_time_range(range_str)
+            if not parsed:
+                continue
+            s, e = parsed
+            period = _map_time_range_to_period(range_str)
+            if period in period_ranges:
+                period_ranges[period].add((s, e))
+                
+    durations = {}
+    for period, ranges in period_ranges.items():
+        total_hours = 0.0
+        for s, e in ranges:
+            if e > s:
+                total_hours += (e - s)
+            else:
+                total_hours += (24.0 - s) + e
+        durations[period] = total_hours
+        
+    return durations
 
 def _find_consumed_column(lines: List[str], slot_map: Dict[str, str]) -> int:
     valid_rows = []

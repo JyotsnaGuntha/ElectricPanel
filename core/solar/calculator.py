@@ -85,6 +85,9 @@ def _validate_row(row: Dict[str, Any]) -> Dict[str, float]:
     if non_zero_vals and all(val < 25.0 for val in non_zero_vals):
         raise ValueError(f"Extracted values for {month} look like tariff rates (all < 25 Units).")
 
+    mp_hours = float(row.get("mp_hours", 0.0))
+    op_hours = float(row.get("op_hours", 0.0))
+
     return {
         "month": month,
         "nh": nh,
@@ -92,6 +95,8 @@ def _validate_row(row: Dict[str, Any]) -> Dict[str, float]:
         "op": op,
         "mp": mp,
         "total": total,
+        "mp_hours": mp_hours,
+        "op_hours": op_hours,
     }
 
 
@@ -157,38 +162,44 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
             "ep": row["ep"],
             "op": row["op"],
             "total": row["total"],
+            "mp_hours": row.get("mp_hours", 0.0),
+            "op_hours": row.get("op_hours", 0.0),
         }
         for row in validated_rows
     ]
 
     # BESS calculations
     avg_mp = total_mp_units / months
+    avg_nh = total_nh_units / months
     avg_ep = total_ep_units / months
     avg_op = total_op_units / months
 
     daily_mp = avg_mp / 30.0
+    daily_nh = avg_nh / 30.0
     daily_ep = avg_ep / 30.0
     daily_op = avg_op / 30.0
 
-    daily_mp_ep = daily_mp + daily_ep
+    daily_non_solar_units = daily_mp + daily_op
 
-    if daily_mp_ep >= daily_op:
-        backup_hours = 6
-        daily_consumption = daily_mp_ep
-    else:
-        backup_hours = 8
-        daily_consumption = daily_op
+    RTE = 0.85 #round trip efficiency
+    DOD = 0.90 #Depth of Discharge
+    system_divisor = RTE * DOD  # 0.765
 
-    if daily_consumption <= 0:
-        backup_hours = 6
-        daily_consumption = 0.0
+    recommended_bess_kwh = daily_non_solar_units / system_divisor if system_divisor > 0.0 else 0.0
 
-    rte = 0.85 #round trip efficiency
-    dod = 0.90 #Depth of Discharge
-    divisor = rte * dod
+    # Determine MP and OP durations dynamically
+    mp_hours_list = [row.get("mp_hours", 0.0) for row in validated_rows if row.get("mp_hours", 0.0) > 0.0]
+    op_hours_list = [row.get("op_hours", 0.0) for row in validated_rows if row.get("op_hours", 0.0) > 0.0]
 
-    recommended_bess_kwh = daily_consumption / divisor if divisor > 0 else 0.0
-    recommended_bess_kw = recommended_bess_kwh / backup_hours if backup_hours > 0 else 0.0
+    mp_hours = mp_hours_list[0] if mp_hours_list else 3.0
+    op_hours = op_hours_list[0] if op_hours_list else 8.0
+
+    # Calculate the average power demand during each non-solar period
+    mp_power = daily_mp / mp_hours if mp_hours > 0.0 else 0.0
+    op_power = daily_op / op_hours if op_hours > 0.0 else 0.0
+
+    # Size the BESS power rating based on the maximum hourly demand
+    recommended_bess_kw = max(mp_power, op_power)
 
     return {
         "months": months,
@@ -204,10 +215,18 @@ def calculate_bill_recommendation(rows: Iterable[Dict[str, Any]]) -> Dict[str, A
         "op_units": round(total_op_units, 2),
         "ep_units": round(total_ep_units, 2),
         "average_monthly_op_units": round(avg_op, 2),
-        "daily_op_units": round(daily_consumption, 2),
+        "daily_op_units": round(daily_non_solar_units, 2),
         "recommended_bess_kwh": recommended_bess_kwh,
         "recommended_bess_kw": recommended_bess_kw,
-        "backup_hours": backup_hours,
+        "backup_hours": op_hours,
+
+        # New keys requested by user
+        "daily_mp": daily_mp,
+        "daily_op": daily_op,
+        "mp_hours": mp_hours,
+        "op_hours": op_hours,
+        "mp_power": mp_power,
+        "op_power": op_power,
 
         # Reference
         "total_units": round(total_units, 2),

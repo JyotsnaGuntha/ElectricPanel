@@ -195,3 +195,67 @@ def draw_bess(
     dwg.add(dwg.rect(insert=(x - 12, y + 11), size=(24, 8), fill=bess_highlight_color, rx=1))
     dwg.add(dwg.rect(insert=(x - 12, y - 1), size=(24, 8), fill=bess_highlight_color, rx=1))
     dwg.add(dwg.rect(insert=(x - 12, y - 13), size=(24, 8), fill=bess_highlight_color, rx=1))
+
+def draw_pcs(dwg, x, y, stroke_color, fill_color, accent_color):
+
+    width = 80
+    height = 50
+
+    # Outer PCS box
+    dwg.add(
+        dwg.rect(
+            (x - width/2, y - height/2),
+            (width, height),
+            rx=4,
+            ry=4,
+            fill=fill_color,
+            stroke=accent_color,
+            stroke_width=2
+        )
+    )
+
+    # Diagonal line (bottom-left to top-right)
+    dwg.add(
+        dwg.line(
+            (x - width/2, y + height/2),
+            (x + width/2, y - height/2),
+            stroke=accent_color,
+            stroke_width=2
+        )
+    )
+
+    # AC symbol (top-left)
+    dwg.add(
+        dwg.text(
+            "AC",
+            insert=(x - 20, y - 8),
+            font_size=14,
+            font_weight="bold",
+            fill=stroke_color,
+            text_anchor="middle"
+        )
+    )
+
+    # DC symbol (bottom-right)
+    dwg.add(
+        dwg.text(
+            "DC",
+            insert=(x + 20, y + 15),
+            font_size=14,
+            font_weight="bold",
+            fill=stroke_color,
+            text_anchor="middle"
+        )
+    )
+
+    # PCS Label
+    dwg.add(
+        dwg.text(
+            "PCS",
+            insert=(x + width/2 + 20, y + 5),
+            font_size=16,
+            font_weight="bold",
+            fill=stroke_color,
+            text_anchor="middle"
+        )
+    )

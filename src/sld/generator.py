@@ -4,7 +4,7 @@ Main SLD (Single Line Diagram) generation logic.
 """
 
 import svgwrite as svg
-from .components import draw_mccb, draw_tower, draw_solar, draw_mgc, draw_bess
+from .components import draw_mccb, draw_tower, draw_solar, draw_mgc, draw_bess, draw_pcs
 from ..constants import SLD_MIN_WIDTH, SLD_HEIGHT, SLD_MIN_COL_SPACING, SLD_MARGIN_LEFT, SLD_MARGIN_RIGHT
 
 
@@ -90,6 +90,8 @@ def generate_sld(
     solar_panel_fill = "#1e293b" if is_dark_theme else "#f8fafc"
     solar_sun_color = "#fbbf24" if is_dark_theme else "#d97706"
     bess_fill_color = "#1e293b" if is_dark_theme else "#f8fafc"
+    pcs_fill_color = "#1e293b" if is_dark_theme else "#f8fafc"
+    pcs_highlight_color = "#ffffff" if is_dark_theme else "#334155"
     bess_highlight_color = "#10b981" if is_dark_theme else "#059669"
     mgc_fill_color = "#1e1b4b" if is_dark_theme else "#eef2ff"
     mgc_stroke_color = "#a78bfa" if is_dark_theme else "#64748b"
@@ -203,6 +205,11 @@ def generate_sld(
             draw_bess(dwg, cx, y_sources, theme_text, bess_fill_color, bess_highlight_color)
             dwg.add(dwg.line((cx, y_sources + 23), (cx, y_division + 50), 
                              stroke=theme_text, stroke_width=2))
+            # PCS
+            draw_pcs(dwg,cx,y_division - 60,theme_text,pcs_fill_color,pcs_highlight_color)
+
+            # PCS → MCCB
+            dwg.add(dwg.line((cx, y_division - 30),(cx, y_division + 50),stroke=theme_text,stroke_width=2))
             draw_mccb(dwg, cx, y_division + 100, system_calcs.mccb_bess, num_poles, 
                      inc["tag"], theme_text, theme_sub, "left", get_component_type(system_calcs.mccb_bess))
             dwg.add(dwg.line((cx, y_division + 150), (cx, y_busbar), 

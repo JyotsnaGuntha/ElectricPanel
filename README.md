@@ -1,4 +1,4 @@
-# Microgrid Panel Designer
+# Microgrid Panel Generator
 
 Microgrid Panel Designer is a desktop application for electrical panel design and export generation.
 
